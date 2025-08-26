@@ -14,6 +14,9 @@
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />
 
+        <!-- Alpine.js -->
+        <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
         <!-- Custom CSS -->
         <link href="{{ asset('css/app.css') }}" rel="stylesheet">
 
@@ -21,9 +24,6 @@
         <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
         <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
         <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.4.0/css/fixedHeader.dataTables.min.css">
-
-        <!-- Alpine.js -->
-        <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
         <!-- jQuery and DataTables JS -->
         <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -80,7 +80,7 @@
                                     <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                                 </svg>
                             </button>
-                            <div x-show="open" @click.away="open = false" x-transition class="dropdown-menu slide-down" style="min-width: 250px; left: 50%; transform: translateX(-50%);">
+                            <div x-show="open" x-cloak @click.away="open = false" x-transition class="dropdown-menu slide-down" style="min-width: 250px; left: 50%; transform: translateX(-50%);">
 
                                 @foreach(Auth::user()->businesses as $business)
                                     <form method="POST" action="{{ route('business.switch', $business) }}">
@@ -129,7 +129,7 @@
                                 <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                             </svg>
                         </button>
-                        <div x-show="open" @click.away="open = false" x-transition class="dropdown-menu slide-down max-w-xs overflow-auto">
+                        <div x-show="open" x-cloak @click.away="open = false" x-transition class="dropdown-menu slide-down max-w-xs overflow-auto">
                             <div style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--gray-200);">
                                 <div style="font-weight: 500; color: var(--gray-900);">{{ Auth::user()->name }}</div>
                                 <div style="font-size: 0.75rem; color: var(--gray-500);">{{ Auth::user()->email }}</div>

@@ -88,6 +88,14 @@ body {
     width: 100%;
 }
 
+[x-cloak] {
+    display: none !important;
+}
+
+.modal-hidden {
+    display: none !important;
+}
+
 .app-sidebar {
     flex-shrink: 0;
     width: 260px; /* adjust as needed */

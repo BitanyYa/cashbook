@@ -162,7 +162,7 @@
                             $allTransactions = $book->transactions;
                             $totalIncome = $allTransactions->where('type', 'income')->sum('amount');
                         @endphp
-                        {{ $book->currency }} {{ number_format($totalIncome, 0) }}
+                        {{ $book->currency }} {{ number_format($totalIncome, 2, '.', ',') }}
                     </div>
                     {{-- <div style="font-size: 0.75rem; opacity: 0.9;">Total Income</div> --}}
                 </div>
@@ -179,7 +179,7 @@
                         @php
                             $totalExpense = $allTransactions->where('type', 'expense')->sum('amount');
                         @endphp
-                        {{ $book->currency }} {{ number_format($totalExpense, 0) }}
+                        {{ $book->currency }} {{ number_format($totalExpense, 2, '.', ',') }}
                     </div>
                     {{-- <div style="font-size: 0.75rem; opacity: 0.9;">Total Expense</div> --}}
                 </div>
@@ -196,7 +196,7 @@
                         @php
                             $netBalance = ($totalIncome ?? 0) - ($totalExpense ?? 0);
                         @endphp
-                        {{ $book->currency }} {{ $netBalance >= 0 ? '' : '-' }}{{ number_format(abs($netBalance), 0) }}
+                        {{ $book->currency }} {{ $netBalance >= 0 ? '' : '-' }}{{ number_format(abs($netBalance), 2, '.', ',') }}
                     </div>
                     {{-- <div style="font-size: 0.75rem; opacity: 0.9;">{{ $netBalance >= 0 ? 'Profit' : 'Loss' }}</div> --}}
                 </div>
@@ -221,9 +221,6 @@
                 Cash Out
             </button>
             @endif
-            @php
-                $userRole = $user->books()->where('book_id', $book->id)->first()->pivot->role ?? 'viewer';
-            @endphp
             @if(in_array($userRole, ['manager']))
             <button @click="$dispatch('open-modal', 'manage-users')" class="btn btn-secondary">
                 <svg style="width: 1rem; height: 1rem; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -365,7 +362,7 @@
     </div>
 
     <!-- Add Transaction Modal -->
-    <x-modal name="add-transaction" :show="false">
+    <x-modal name="add-transaction" :show="false" class="modal-hidden">
         <div style="padding: 1.5rem;">
             <h3 style="font-size: 1.125rem; font-weight: 600; color: var(--gray-900); margin-bottom: 1rem;">Add New Transaction</h3>
             <form id="transaction-form" method="POST" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 1rem;">
@@ -457,7 +454,7 @@
     </x-modal>
 
     <!-- Edit Transaction Modal -->
-    <x-modal name="edit-transaction" :show="false">
+    <x-modal name="edit-transaction" :show="false" class="modal-hidden">
         <div style="padding: 1.5rem;">
             <h3 style="font-size: 1.125rem; font-weight: 600; color: var(--gray-900); margin-bottom: 1rem;">Edit Transaction</h3>
             <form id="edit-transaction-form" method="POST" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 1rem;">
@@ -545,7 +542,7 @@
     </x-modal>
 
     <!-- Manage Users Modal -->
-    <x-modal name="manage-users" :show="false">
+    <x-modal name="manage-users" :show="false" class="modal-hidden">
         <div style="padding: 1.5rem; max-width: 800px;">
             <h3 style="font-size: 1.125rem; font-weight: 600; color: var(--gray-900); margin-bottom: 1rem;">Manage Book Users</h3>
 
@@ -1091,7 +1088,11 @@
             if (card) {
                 const amountElement = card.querySelector('.summary-amount');
                 if (amountElement) {
-                    amountElement.textContent = `{{ $book->currency }} ${parseFloat(amount).toFixed(2)}`;
+                    // Force US-style formatting to match PHP number_format
+                    amountElement.textContent = `{{ $book->currency }} ${Number(amount).toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                    })}`;
                 }
             }
         }
