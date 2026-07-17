@@ -104,7 +104,7 @@
                                     👁 View Businesses
                                 </a>
 
-                                <!-- Create New Business Button -->
+                                                                <!-- Create New Business Button -->
                                 <a href="{{ route('businesses.create') }}" class="dropdown-item" style="display: block; padding: 0.5rem 1rem; color: var(--primary-color);">
                                     ➕ New Business
                                 </a>
@@ -243,6 +243,17 @@
                                     </svg>
                                     <span>Businesses</span>
                                 </a>
+                            
+                            
+                                <a href="{{ route('books.index') }}" class="nav-link {{ Route::is('books.*') || Route::is('transactions.*') || Route::is('reports.*') ? 'active' : '' }}" style="border: 1px solid var(--gray-200); border-radius: 6px; padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                                <!-- Book Icon -->
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                                </svg>
+                                <span>Books</span>
+                            </a>
+
+                                
 
                                 {{-- Notifications --}}
                                 <livewire:sidebar.sidebar-notifications />

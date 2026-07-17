@@ -37,36 +37,20 @@ class DashboardController extends Controller
         // Get user's role in the business
         $role = $user->businesses()->where('business_id', $business->id)->value('role');
 
-        // // Determine which books the user can access
-        // if (in_array($role, ['owner', 'admin'])) {
-        //     // Owners and admins can see all business data
-        //     $accessibleBooks = Book::where('business_id', $business->id)->latest('updated_at')->get();
-        //     $accessibleBookIds = $accessibleBooks->pluck('id');
-        //     $hasAccess = true;
-        // } else {
-            // Staff can only see data from books they are assigned to
-            $accessibleBooks = $user->books()->where('business_id', $business->id)->get();
-            $accessibleBookIds = $accessibleBooks->pluck('id');
-            $hasAccess = $accessibleBookIds->isNotEmpty();
-        // }
-
-        // If user has no access to any books, show empty dashboard
-        if (!$hasAccess) {
-            return view('dashboard', [
-                'lineLabels' => $days,
-                'incomeSeries' => array_fill(0, 30, 0.0),
-                'expenseSeries' => array_fill(0, 30, 0.0),
-                'categoryLabels' => collect(),
-                'categorySeries' => collect(),
-                'hasAccess' => false,
-                'role' => $role,
-                'accessibleBooks' => collect(),
-                'totalIncome' => 0,
-                'totalExpense' => 0,
-                'recentTransactions' => collect(),
-            ]);
-        }
-
+        // Determine which books the user can access
+        if (in_array($role, ['owner', 'admin'])) {
+    // Owners and admins can see all business data, and always have
+    // access so they can create the business's first book.
+    $accessibleBooks = Book::where('business_id', $business->id)->latest('updated_at')->get();
+    $accessibleBookIds = $accessibleBooks->pluck('id');
+    $hasAccess = true;
+        } else {
+    // Staff can only see data from books they are assigned to
+    $accessibleBooks = $user->books()->where('business_id', $business->id)->get();
+    $accessibleBookIds = $accessibleBooks->pluck('id');
+    $hasAccess = $accessibleBookIds->isNotEmpty();
+    }
+    
         $totals = Transaction::where('business_id', $business->id)
             ->whereIn('book_id', $accessibleBookIds)
             ->where('status', 'approved')
