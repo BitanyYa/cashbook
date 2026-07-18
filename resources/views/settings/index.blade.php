@@ -90,9 +90,9 @@
                                     <form method="post" action="{{ route('settings.member.role', $member) }}">
                                         @csrf
                                         <select name="role" onchange="this.form.submit()" style="{{ $selectStyle }}">
-                                            <option value="owner" @if($member->pivot->role === 'owner') selected @endif>{{ __('Owner') }}</option>
+                                            <option value="primary_admin" @if($member->pivot->role === 'primary_admin') selected @endif>{{ __('Primary Admin') }}</option>
                                             <option value="admin" @if($member->pivot->role === 'admin') selected @endif>{{ __('Admin') }}</option>
-                                            <option value="staff" @if($member->pivot->role === 'staff') selected @endif>{{ __('Staff') }}</option>
+                                            <option value="employee" @if($member->pivot->role === 'employee') selected @endif>{{ __('Employee') }}</option>
                                         </select>
                                     </form>
                                     <form method="post" action="{{ route('settings.member.remove', $member) }}">
@@ -135,9 +135,9 @@
                         <div style="{{ $formGroupStyle }}">
                             <x-input-label for="role" :value="__('Role')" />
                             <select name="role" id="role" style="{{ $selectStyle }}">
-                                <option value="owner">{{ __('Owner') }}</option>
+                                <option value="primary_admin">{{ __('Primary Admin') }}</option>
                                 <option value="admin">{{ __('Admin') }}</option>
-                                <option value="staff" selected>{{ __('Staff') }}</option>
+                                <option value="employee" selected>{{ __('Employee') }}</option>
                             </select>
                         </div>
                         <div style="display: flex; align-items: center; gap: 1rem;">

@@ -13,9 +13,9 @@
                 <h1 class="page-title">{{ $book->name }}</h1>
 
                 @php
-                    $userRole = Auth::user()->books()->where('book_id', $book->id)->first()->pivot->role ?? 'viewer';
+                    $userRole = Auth::user()->books()->where('book_id', $book->id)->first()->pivot->role ?? 'employee';
                 @endphp
-                @if(in_array($userRole, ['manager']))
+                @if(in_array($userRole, ['primary_admin', 'admin']))
                     <a href="{{ route('books.edit', $book) }}" class="page-header-icon-btn" title="Edit Book Settings">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
@@ -40,7 +40,7 @@
         </div>
 
         <!-- Right side: Action Buttons -->
-        @if ($bookRole !== 'viewer')
+        @if ($bookRole !== 'employee')
             <div class="page-header-right">
                 <a href="{{ route('transactions.import.create', $book) }}" class="btn btn-secondary">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -207,7 +207,7 @@
     <!-- Action Bar -->
     <div x-data="{}" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
         <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
-            @if($bookRole !== 'viewer')
+            @if($bookRole !== 'employee')
             <button @click="$dispatch('open-modal', 'add-transaction'); $nextTick(() => { document.getElementById('type').value = 'income'; document.getElementById('transaction-form').reset(); document.getElementById('type').value = 'income'; })" class="btn btn-success">
                 <svg style="width: 1rem; height: 1rem; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -221,7 +221,7 @@
                 Cash Out
             </button>
             @endif
-            @if(in_array($userRole, ['manager']))
+            @if(in_array($userRole, ['primary_admin', 'admin']))
             <button @click="$dispatch('open-modal', 'manage-users')" class="btn btn-secondary">
                 <svg style="width: 1rem; height: 1rem; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
@@ -229,7 +229,7 @@
                 Manage Users
             </button>
             @endif
-            @if($bookRole !== 'viewer')
+            @if($bookRole !== 'employee')
                 <!-- New Bulk Delete Button -->
                 <button id="bulk-delete-btn" class="btn btn-danger" style="display: none;" onclick="bulkDeleteTransactions()">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
@@ -348,7 +348,7 @@
                     position: sticky;
                     bottom: 0;">
                 <div class="detail-actions">
-                    @if($bookRole !== 'viewer')
+                    @if($bookRole !== 'employee')
                         <button id="edit-transaction-btn" class="btn btn-primary" onclick="editTransactionFromDetail()">
                             Edit Transaction
                         </button>
@@ -600,9 +600,9 @@
                     <div class="form-group">
                         <label for="user_role" class="form-label">Role</label>
                         <select id="user_role" name="role" class="form-select" required>
-                            <option value="viewer">Viewer - Can only view transactions</option>
-                            <option value="editor">Editor - Can add/edit own transactions</option>
-                            <option value="manager">Manager - Full access to transactions</option>
+                            <option value="employee">Employee - Can add/edit own transactions</option>
+                            <option value="admin">Admin - Can manage books, members, and transactions</option>
+                            <option value="primary_admin">Primary Admin - Full access to book and business management</option>
                         </select>
                     </div>
 
@@ -961,17 +961,17 @@
             // Action buttons
             const bookRole = '<?php echo $bookRole; ?>';
 
-            // Only show buttons for non-viewers
-            if (bookRole !== 'viewer') {
+            // Only show buttons for non-employees
+            if (bookRole !== 'employee') {
                 document.getElementById('edit-transaction-btn').style.display = 'inline-block';
                 document.getElementById('delete-transaction-btn').style.display = 'inline-block';
-                // Editors can only edit/delete if they created the transaction
-                if (bookRole === 'editor') {
+                // Employees can only edit/delete if they created the transaction
+                if (bookRole === 'employee') {
                     if (transaction.user.id === {{ auth()->id() }}) {
                         document.getElementById('edit-transaction-btn').onclick = () => editTransactionFromDetail();
                         document.getElementById('delete-transaction-btn').onclick = () => deleteTransactionFromDetail();
                     } else {
-                        // Hide buttons if editor didn't create it
+                        // Hide buttons if employee didn't create it
                         document.getElementById('edit-transaction-btn').style.display = 'none';
                         document.getElementById('delete-transaction-btn').style.display = 'none';
                     }
@@ -1702,9 +1702,9 @@
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <select onchange="updateUserRole(${user.id}, this.value)" style="font-size: 0.875rem; padding: 0.25rem 0.5rem; border: 1px solid var(--gray-300); border-radius: 0.25rem;">
-                            <option value="viewer" ${user.role === 'viewer' ? 'selected' : ''}>Viewer</option>
-                            <option value="editor" ${user.role === 'editor' ? 'selected' : ''}>Editor</option>
-                            <option value="manager" ${user.role === 'manager' ? 'selected' : ''}>Manager</option>
+                            <option value="employee" ${user.role === 'employee' ? 'selected' : ''}>Employee</option>
+                            <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                            <option value="primary_admin" ${user.role === 'primary_admin' ? 'selected' : ''}>Primary Admin</option>
                         </select>
                         <button onclick="removeUserFromBook(${user.id})" style="background: none; border: none; color: var(--danger-color); cursor: pointer; padding: 0.25rem;">
                             <svg style="width: 1rem; height: 1rem;" fill="currentColor" viewBox="0 0 20 20">
@@ -1746,7 +1746,7 @@
                 if (data.success) {
                     showNotification('User added successfully!', 'success');
                     clearSelectedUser(); // Clear the selected user
-                    document.getElementById('user_role').value = 'viewer'; // Reset role to default
+                    document.getElementById('user_role').value = 'employee'; // Reset role to default
                     loadBookUsers(); // Reload the users list
                 } else {
                     showNotification(data.message || 'Error adding user', 'error');

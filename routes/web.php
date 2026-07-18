@@ -31,8 +31,8 @@ Route::middleware('auth')->group(function () {
         // User search route (accessible to anyone who can view the book)
         Route::get('books/{book}/users/search', [\App\Http\Controllers\BookController::class, 'searchUsers'])->name('books.users.search');
 
-        // Book user management routes (admin/owner only)
-        Route::middleware('business.role:owner,admin,manager')->group(function() {
+        // Book user management routes (admin/primary_admin only)
+        Route::middleware('business.role:primary_admin,admin')->group(function() {
             Route::get('books/{book}/users', [\App\Http\Controllers\BookController::class, 'users'])->name('books.users');
             Route::post('books/{book}/users/invite', [\App\Http\Controllers\BookController::class, 'inviteUser'])->name('books.users.invite');
             Route::put('books/{book}/users/{user}/role', [\App\Http\Controllers\BookController::class, 'updateUserRole'])->name('books.users.role');
@@ -59,7 +59,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/books/{book}/reports/download', [ReportController::class, 'download'])->name('reports.download');
         Route::delete('settings/leave', [\App\Http\Controllers\TeamController::class, 'leave'])->name('settings.leave');
 
-        Route::middleware('business.role:owner,admin')->group(function(){
+        Route::middleware('business.role:primary_admin,admin')->group(function(){
             Route::get('settings', [\App\Http\Controllers\TeamController::class, 'index'])->name('settings.index');
             Route::post('settings/business', [\App\Http\Controllers\TeamController::class, 'updateBusiness'])->name('settings.business.update');
             Route::post('settings/invite', [\App\Http\Controllers\TeamController::class, 'invite'])->name('settings.invite');

@@ -1,7 +1,7 @@
 <x-app-layout>
     @if($activeBusiness)
         @if(isset($hasAccess) && !$hasAccess)
-            <!-- No Access Message for Staff -->
+            <!-- No Access Message for Employees -->
             <div style="margin-bottom: 1.5rem;">
                 <div>
                     <h1 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem;">Dashboard</h1>
@@ -16,10 +16,10 @@
                 <h3 style="font-size: 1.125rem; font-weight: 600; color: #111827; margin-bottom: 0.5rem;">No Books Assigned</h3>
                 <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 1.5rem;">
                     You don't have access to any books in this business yet.<br>
-                    Contact your business owner or administrator to get access to books so you can view transactions and data.
+                    Contact your business primary admin or administrator to get access to books so you can view transactions and data.
                 </p>
                 <p style="font-size: 0.75rem; color: #9ca3af;">
-                    Role: {{ ucfirst($role ?? 'staff') }}
+                    Role: {{ ucfirst($role ?? 'employee') }}
                 </p>
             </div>
         @else

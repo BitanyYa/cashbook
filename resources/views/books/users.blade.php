@@ -20,7 +20,7 @@
             <h3 style="font-size: 1.125rem; font-weight: 600; color: var(--gray-900); margin-bottom: 1rem;">Role Permissions</h3>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
                 <div style="padding: 1rem; background: var(--gray-50); border-radius: var(--border-radius);">
-                    <h4 style="font-weight: 600; color: var(--success-color); margin-bottom: 0.5rem;">Manager</h4>
+                    <h4 style="font-weight: 600; color: var(--success-color); margin-bottom: 0.5rem;">Primary Admin</h4>
                     <ul style="list-style: none; padding: 0; margin: 0; font-size: 0.875rem; color: var(--gray-600);">
                         <li>• Add, edit, delete transactions</li>
                         <li>• Approve/reject transactions</li>
@@ -29,7 +29,7 @@
                     </ul>
                 </div>
                 <div style="padding: 1rem; background: var(--gray-50); border-radius: var(--border-radius);">
-                    <h4 style="font-weight: 600; color: var(--primary-color); margin-bottom: 0.5rem;">Editor</h4>
+                    <h4 style="font-weight: 600; color: var(--primary-color); margin-bottom: 0.5rem;">Admin</h4>
                     <ul style="list-style: none; padding: 0; margin: 0; font-size: 0.875rem; color: var(--gray-600);">
                         <li>• Add, edit own transactions</li>
                         <li>• View all transactions</li>
@@ -38,7 +38,7 @@
                     </ul>
                 </div>
                 <div style="padding: 1rem; background: var(--gray-50); border-radius: var(--border-radius);">
-                    <h4 style="font-weight: 600; color: var(--gray-500); margin-bottom: 0.5rem;">Viewer</h4>
+                    <h4 style="font-weight: 600; color: var(--gray-500); margin-bottom: 0.5rem;">Employee</h4>
                     <ul style="list-style: none; padding: 0; margin: 0; font-size: 0.875rem; color: var(--gray-600);">
                         <li>• View all transactions</li>
                         <li>• Export reports</li>
@@ -109,9 +109,9 @@
                 <div class="form-group">
                     <label for="role" class="form-label">Role</label>
                     <select id="role" name="role" class="form-select" required>
-                        <option value="viewer">Viewer - Can only view transactions</option>
-                        <option value="editor">Editor - Can add/edit own transactions</option>
-                        <option value="manager">Manager - Full access to transactions</option>
+                        <option value="employee">Employee - Can add/edit own transactions</option>
+                        <option value="admin">Admin - Can manage books, members, and transactions</option>
+                        <option value="primary_admin">Primary Admin - Full access to book and business management</option>
                     </select>
                     <x-input-error :messages="$errors->get('role')" class="mt-2" />
                 </div>
@@ -140,8 +140,8 @@
                             <div style="display: flex; align-items: center; gap: 1rem;">
                                 <!-- Role Badge -->
                                 <span class="badge {{
-                                    $user->pivot->role === 'manager' ? 'badge-success' :
-                                    ($user->pivot->role === 'editor' ? 'badge-primary' : 'badge-secondary')
+                                    $user->pivot->role === 'primary_admin' ? 'badge-success' :
+                                    ($user->pivot->role === 'admin' ? 'badge-primary' : 'badge-secondary')
                                 }}">
                                     {{ ucfirst($user->pivot->role) }}
                                 </span>
@@ -151,9 +151,9 @@
                                     @csrf
                                     @method('PUT')
                                     <select name="role" onchange="this.form.submit()" class="form-select" style="font-size: 0.875rem; padding: 0.25rem 0.5rem; width: auto;">
-                                        <option value="viewer" {{ $user->pivot->role === 'viewer' ? 'selected' : '' }}>Viewer</option>
-                                        <option value="editor" {{ $user->pivot->role === 'editor' ? 'selected' : '' }}>Editor</option>
-                                        <option value="manager" {{ $user->pivot->role === 'manager' ? 'selected' : '' }}>Manager</option>
+                                        <option value="employee" {{ $user->pivot->role === 'employee' ? 'selected' : '' }}>Employee</option>
+                                        <option value="admin" {{ $user->pivot->role === 'admin' ? 'selected' : '' }}>Admin</option>
+                                        <option value="primary_admin" {{ $user->pivot->role === 'primary_admin' ? 'selected' : '' }}>Primary Admin</option>
                                     </select>
                                 </form>
 

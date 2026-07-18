@@ -38,14 +38,14 @@ class DashboardController extends Controller
         $role = $user->businesses()->where('business_id', $business->id)->value('role');
 
         // Determine which books the user can access
-        if (in_array($role, ['owner', 'admin'])) {
-    // Owners and admins can see all business data, and always have
+        if (in_array($role, ['primary_admin', 'admin'])) {
+    // Primary admins and admins can see all business data, and always have
     // access so they can create the business's first book.
     $accessibleBooks = Book::where('business_id', $business->id)->latest('updated_at')->get();
     $accessibleBookIds = $accessibleBooks->pluck('id');
     $hasAccess = true;
         } else {
-    // Staff can only see data from books they are assigned to
+    // Employees can only see data from books they are assigned to
     $accessibleBooks = $user->books()->where('business_id', $business->id)->get();
     $accessibleBookIds = $accessibleBooks->pluck('id');
     $hasAccess = $accessibleBookIds->isNotEmpty();

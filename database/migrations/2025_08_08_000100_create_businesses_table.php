@@ -19,7 +19,7 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('business_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->enum('role', ['owner','admin','staff'])->default('staff');
+            $table->enum('role', ['primary_admin','admin','employee'])->default('employee');
             $table->timestamps();
             $table->unique(['business_id','user_id']);
         });

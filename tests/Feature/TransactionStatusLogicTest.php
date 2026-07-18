@@ -17,9 +17,9 @@ class TransactionStatusLogicTest extends TestCase
     protected $business;
     protected $book;
     protected $category;
-    protected $managerUser;
-    protected $editorUser;
-    protected $viewerUser;
+    protected $primaryAdminUser;
+    protected $employeeUser;
+    protected $anotherEmployeeUser;
 
     protected function setUp(): void
     {
@@ -29,22 +29,22 @@ class TransactionStatusLogicTest extends TestCase
         $this->book = Book::factory()->create(['business_id' => $this->business->id]);
         $this->category = Category::factory()->create(['business_id' => $this->business->id]);
 
-        $this->managerUser = User::factory()->create(['name' => 'Manager']);
-        $this->editorUser = User::factory()->create(['name' => 'Editor']);
-        $this->viewerUser = User::factory()->create(['name' => 'Viewer']);
+        $this->primaryAdminUser = User::factory()->create(['name' => 'Primary Admin']);
+        $this->employeeUser = User::factory()->create(['name' => 'Employee']);
+        $this->anotherEmployeeUser = User::factory()->create(['name' => 'Another Employee']);
 
         // Attach to business
         $this->business->users()->attach([
-            $this->managerUser->id => ['role' => 'staff'],
-            $this->editorUser->id => ['role' => 'staff'],
-            $this->viewerUser->id => ['role' => 'staff']
+            $this->primaryAdminUser->id => ['role' => 'employee'],
+            $this->employeeUser->id => ['role' => 'employee'],
+            $this->anotherEmployeeUser->id => ['role' => 'employee']
         ]);
 
         // Attach to book with roles
         $this->book->users()->attach([
-            $this->managerUser->id => ['role' => 'manager'],
-            $this->editorUser->id => ['role' => 'editor'],
-            $this->viewerUser->id => ['role' => 'viewer']
+            $this->primaryAdminUser->id => ['role' => 'primary_admin'],
+            $this->employeeUser->id => ['role' => 'employee'],
+            $this->anotherEmployeeUser->id => ['role' => 'employee']
         ]);
 
         // Set active business in session
@@ -52,9 +52,9 @@ class TransactionStatusLogicTest extends TestCase
     }
 
     /** @test */
-    public function manager_transactions_are_auto_approved()
+    public function primary_admin_transactions_are_auto_approved()
     {
-        $this->actingAs($this->managerUser);
+        $this->actingAs($this->primaryAdminUser);
 
         $response = $this->postJson(route('transactions.store'), [
             'book_id' => $this->book->id,
@@ -62,22 +62,22 @@ class TransactionStatusLogicTest extends TestCase
             'type' => 'income',
             'amount' => 1000,
             'transaction_date' => now()->toDateString(),
-            'description' => 'Manager transaction'
+            'description' => 'Primary Admin transaction'
         ]);
 
         $response->assertJson(['success' => true]);
 
         $this->assertDatabaseHas('transactions', [
             'book_id' => $this->book->id,
-            'user_id' => $this->managerUser->id,
+            'user_id' => $this->primaryAdminUser->id,
             'status' => 'approved'
         ]);
     }
 
     /** @test */
-    public function editor_transactions_are_pending()
+    public function employee_transactions_are_pending()
     {
-        $this->actingAs($this->editorUser);
+        $this->actingAs($this->employeeUser);
 
         $response = $this->postJson(route('transactions.store'), [
             'book_id' => $this->book->id,
@@ -85,51 +85,51 @@ class TransactionStatusLogicTest extends TestCase
             'type' => 'expense',
             'amount' => 500,
             'transaction_date' => now()->toDateString(),
-            'description' => 'Editor transaction'
+            'description' => 'Employee transaction'
         ]);
 
         $response->assertJson(['success' => true]);
 
         $this->assertDatabaseHas('transactions', [
             'book_id' => $this->book->id,
-            'user_id' => $this->editorUser->id,
+            'user_id' => $this->employeeUser->id,
             'status' => 'pending'
         ]);
     }
 
     /** @test */
-    public function viewer_cannot_create_transactions()
+    public function employee_with_no_edit_permission_cannot_create_transactions()
     {
-        $this->actingAs($this->viewerUser);
+        $this->actingAs($this->anotherEmployeeUser);
 
         $response = $this->postJson(route('transactions.store'), [
             'book_id' => $this->book->id,
             'type' => 'income',
             'amount' => 750,
             'transaction_date' => now()->toDateString(),
-            'description' => 'Viewer transaction attempt'
+            'description' => 'Employee transaction attempt'
         ]);
 
         $response->assertStatus(403);
         $response->assertJson([
-            'message' => 'Viewers cannot add transactions to this book'
+            'message' => 'Employees cannot add transactions to this book'
         ]);
     }
 
     /** @test */
-    public function manager_can_approve_pending_transactions()
+    public function primary_admin_can_approve_pending_transactions()
     {
-        // Create pending transaction by editor
+        // Create pending transaction by employee
         $transaction = Transaction::factory()->create([
             'business_id' => $this->business->id,
             'book_id' => $this->book->id,
-            'user_id' => $this->editorUser->id,
+            'user_id' => $this->employeeUser->id,
             'status' => 'pending',
             'type' => 'income',
             'amount' => 1000
         ]);
 
-        $this->actingAs($this->managerUser);
+        $this->actingAs($this->primaryAdminUser);
 
         $response = $this->postJson(route('transactions.approve', $transaction));
 
@@ -142,19 +142,19 @@ class TransactionStatusLogicTest extends TestCase
     }
 
     /** @test */
-    public function manager_can_reject_pending_transactions()
+    public function primary_admin_can_reject_pending_transactions()
     {
-        // Create pending transaction by editor
+        // Create pending transaction by employee
         $transaction = Transaction::factory()->create([
             'business_id' => $this->business->id,
             'book_id' => $this->book->id,
-            'user_id' => $this->editorUser->id,
+            'user_id' => $this->employeeUser->id,
             'status' => 'pending',
             'type' => 'expense',
             'amount' => 500
         ]);
 
-        $this->actingAs($this->managerUser);
+        $this->actingAs($this->primaryAdminUser);
 
         $response = $this->postJson(route('transactions.reject', $transaction));
 
@@ -167,18 +167,18 @@ class TransactionStatusLogicTest extends TestCase
     }
 
     /** @test */
-    public function editor_cannot_approve_or_reject_transactions()
+    public function employee_cannot_approve_or_reject_transactions()
     {
         $transaction = Transaction::factory()->create([
             'business_id' => $this->business->id,
             'book_id' => $this->book->id,
-            'user_id' => $this->managerUser->id,
+            'user_id' => $this->primaryAdminUser->id,
             'status' => 'pending',
             'type' => 'income',
             'amount' => 1000
         ]);
 
-        $this->actingAs($this->editorUser);
+        $this->actingAs($this->employeeUser);
 
         // Try to approve
         $response = $this->postJson(route('transactions.approve', $transaction));
@@ -190,18 +190,18 @@ class TransactionStatusLogicTest extends TestCase
     }
 
     /** @test */
-    public function viewer_cannot_approve_or_reject_transactions()
+    public function another_employee_cannot_approve_or_reject_transactions()
     {
         $transaction = Transaction::factory()->create([
             'business_id' => $this->business->id,
             'book_id' => $this->book->id,
-            'user_id' => $this->editorUser->id,
+            'user_id' => $this->employeeUser->id,
             'status' => 'pending',
             'type' => 'income',
             'amount' => 1000
         ]);
 
-        $this->actingAs($this->viewerUser);
+        $this->actingAs($this->anotherEmployeeUser);
 
         // Try to approve
         $response = $this->postJson(route('transactions.approve', $transaction));
@@ -215,57 +215,57 @@ class TransactionStatusLogicTest extends TestCase
     /** @test */
     public function editing_transaction_preserves_original_status_logic()
     {
-        // Create approved transaction by manager
-        $managerTransaction = Transaction::factory()->create([
+        // Create approved transaction by primary admin
+        $primaryAdminTransaction = Transaction::factory()->create([
             'business_id' => $this->business->id,
             'book_id' => $this->book->id,
-            'user_id' => $this->managerUser->id,
+            'user_id' => $this->primaryAdminUser->id,
             'status' => 'approved',
             'type' => 'income',
             'amount' => 1000
         ]);
 
-        // Create pending transaction by editor
-        $editorTransaction = Transaction::factory()->create([
+        // Create pending transaction by employee
+        $employeeTransaction = Transaction::factory()->create([
             'business_id' => $this->business->id,
             'book_id' => $this->book->id,
-            'user_id' => $this->editorUser->id,
+            'user_id' => $this->employeeUser->id,
             'status' => 'pending',
             'type' => 'expense',
             'amount' => 500
         ]);
 
-        // Manager edits their own transaction - should remain approved
-        $this->actingAs($this->managerUser);
-        $response = $this->putJson(route('transactions.update', $managerTransaction), [
-            'book_id' => $managerTransaction->book_id,
-            'category_id' => $managerTransaction->category_id,
+        // Primary admin edits their own transaction - should remain approved
+        $this->actingAs($this->primaryAdminUser);
+        $response = $this->putJson(route('transactions.update', $primaryAdminTransaction), [
+            'book_id' => $primaryAdminTransaction->book_id,
+            'category_id' => $primaryAdminTransaction->category_id,
             'amount' => 1200,
-            'type' => $managerTransaction->type,
-            'transaction_date' => $managerTransaction->transaction_date->format('Y-m-d'),
-            'description' => 'Updated by manager'
+            'type' => $primaryAdminTransaction->type,
+            'transaction_date' => $primaryAdminTransaction->transaction_date->format('Y-m-d'),
+            'description' => 'Updated by primary admin'
         ]);
 
         $response->assertJson(['success' => true]);
         $this->assertDatabaseHas('transactions', [
-            'id' => $managerTransaction->id,
+            'id' => $primaryAdminTransaction->id,
             'status' => 'approved' // Should remain approved
         ]);
 
-        // Editor edits their own pending transaction - should remain pending
-        $this->actingAs($this->editorUser);
-        $response = $this->putJson(route('transactions.update', $editorTransaction), [
-            'book_id' => $editorTransaction->book_id,
-            'category_id' => $editorTransaction->category_id,
+        // Employee edits their own pending transaction - should remain pending
+        $this->actingAs($this->employeeUser);
+        $response = $this->putJson(route('transactions.update', $employeeTransaction), [
+            'book_id' => $employeeTransaction->book_id,
+            'category_id' => $employeeTransaction->category_id,
             'amount' => 600,
-            'type' => $editorTransaction->type,
-            'transaction_date' => $editorTransaction->transaction_date->format('Y-m-d'),
-            'description' => 'Updated by editor'
+            'type' => $employeeTransaction->type,
+            'transaction_date' => $employeeTransaction->transaction_date->format('Y-m-d'),
+            'description' => 'Updated by employee'
         ]);
 
         $response->assertJson(['success' => true]);
         $this->assertDatabaseHas('transactions', [
-            'id' => $editorTransaction->id,
+            'id' => $employeeTransaction->id,
             'status' => 'pending' // Should remain pending
         ]);
     }
@@ -277,7 +277,7 @@ class TransactionStatusLogicTest extends TestCase
         Transaction::factory()->create([
             'business_id' => $this->business->id,
             'book_id' => $this->book->id,
-            'user_id' => $this->managerUser->id,
+            'user_id' => $this->primaryAdminUser->id,
             'type' => 'income',
             'amount' => 1000,
             'status' => 'approved'
@@ -287,7 +287,7 @@ class TransactionStatusLogicTest extends TestCase
         Transaction::factory()->create([
             'business_id' => $this->business->id,
             'book_id' => $this->book->id,
-            'user_id' => $this->editorUser->id,
+            'user_id' => $this->employeeUser->id,
             'type' => 'income',
             'amount' => 500,
             'status' => 'pending'
@@ -297,13 +297,13 @@ class TransactionStatusLogicTest extends TestCase
         Transaction::factory()->create([
             'business_id' => $this->business->id,
             'book_id' => $this->book->id,
-            'user_id' => $this->editorUser->id,
+            'user_id' => $this->employeeUser->id,
             'type' => 'income',
             'amount' => 200,
             'status' => 'rejected'
         ]);
 
-        $this->actingAs($this->managerUser);
+        $this->actingAs($this->primaryAdminUser);
 
         // Check book summary - should only include approved transactions
         $response = $this->get(route('books.show', $this->book));

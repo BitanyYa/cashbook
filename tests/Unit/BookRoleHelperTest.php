@@ -24,18 +24,18 @@ class BookRoleHelperTest extends TestCase
         $this->book = Book::factory()->create(['business_id' => $this->business->id]);
         $this->user = User::factory()->create();
 
-        $this->business->users()->attach($this->user->id, ['role' => 'staff']);
+        $this->business->users()->attach($this->user->id, ['role' => 'employee']);
     }
 
     /** @test */
     public function user_book_role_returns_correct_role()
     {
-        // Attach user to book as manager
-        $this->book->users()->attach($this->user->id, ['role' => 'manager']);
+        // Attach user to book as primary_admin
+        $this->book->users()->attach($this->user->id, ['role' => 'primary_admin']);
 
         $role = $this->user->getBookRole($this->book);
 
-        $this->assertEquals('manager', $role);
+        $this->assertEquals('primary_admin', $role);
     }
 
     /** @test */
@@ -48,49 +48,49 @@ class BookRoleHelperTest extends TestCase
     }
 
     /** @test */
-    public function business_owner_has_manager_access_to_all_books()
+    public function business_primary_admin_has_primary_admin_access_to_all_books()
     {
-        // Make user business owner
-        $this->business->users()->updateExistingPivot($this->user->id, ['role' => 'owner']);
+        // Make user business primary admin
+        $this->business->users()->updateExistingPivot($this->user->id, ['role' => 'primary_admin']);
 
         $role = $this->user->getBookRole($this->book);
 
-        $this->assertEquals('manager', $role);
+        $this->assertEquals('primary_admin', $role);
     }
 
     /** @test */
-    public function business_admin_has_manager_access_to_all_books()
+    public function business_admin_has_admin_access_to_all_books()
     {
         // Make user business admin
         $this->business->users()->updateExistingPivot($this->user->id, ['role' => 'admin']);
 
         $role = $this->user->getBookRole($this->book);
 
-        $this->assertEquals('manager', $role);
+        $this->assertEquals('admin', $role);
     }
 
     /** @test */
     public function user_can_check_specific_book_permissions()
     {
-        // Test manager permissions
-        $this->book->users()->attach($this->user->id, ['role' => 'manager']);
+        // Test primary_admin permissions
+        $this->book->users()->attach($this->user->id, ['role' => 'primary_admin']);
 
         $this->assertTrue($this->user->canManageBook($this->book));
         $this->assertTrue($this->user->canEditBook($this->book));
         $this->assertTrue($this->user->canViewBook($this->book));
 
-        // Test editor permissions
-        $this->book->users()->updateExistingPivot($this->user->id, ['role' => 'editor']);
+        // Test employee permissions
+        $this->book->users()->updateExistingPivot($this->user->id, ['role' => 'employee']);
 
         $this->assertFalse($this->user->canManageBook($this->book));
         $this->assertTrue($this->user->canEditBook($this->book));
         $this->assertTrue($this->user->canViewBook($this->book));
 
-        // Test viewer permissions
-        $this->book->users()->updateExistingPivot($this->user->id, ['role' => 'viewer']);
+        // Test employee permissions with no manage access
+        $this->book->users()->updateExistingPivot($this->user->id, ['role' => 'employee']);
 
         $this->assertFalse($this->user->canManageBook($this->book));
-        $this->assertFalse($this->user->canEditBook($this->book));
+        $this->assertTrue($this->user->canEditBook($this->book));
         $this->assertTrue($this->user->canViewBook($this->book));
 
         // Test no access
@@ -104,7 +104,7 @@ class BookRoleHelperTest extends TestCase
     /** @test */
     public function book_can_check_user_permissions()
     {
-        $this->book->users()->attach($this->user->id, ['role' => 'editor']);
+        $this->book->users()->attach($this->user->id, ['role' => 'employee']);
 
         $this->assertTrue($this->book->userHasAccess($this->user));
         $this->assertTrue($this->book->userCanEdit($this->user));
@@ -112,7 +112,7 @@ class BookRoleHelperTest extends TestCase
 
         // Test with different user
         $otherUser = User::factory()->create();
-        $this->business->users()->attach($otherUser->id, ['role' => 'staff']);
+        $this->business->users()->attach($otherUser->id, ['role' => 'employee']);
 
         $this->assertFalse($this->book->userHasAccess($otherUser));
         $this->assertFalse($this->book->userCanEdit($otherUser));
@@ -127,8 +127,8 @@ class BookRoleHelperTest extends TestCase
         $book3 = Book::factory()->create(['business_id' => $this->business->id]);
 
         // Give user access to book1 and book2 only
-        $this->book->users()->attach($this->user->id, ['role' => 'viewer']);
-        $book2->users()->attach($this->user->id, ['role' => 'editor']);
+        $this->book->users()->attach($this->user->id, ['role' => 'employee']);
+        $book2->users()->attach($this->user->id, ['role' => 'employee']);
 
         $accessibleBooks = $this->user->accessibleBooks($this->business);
 
@@ -139,10 +139,10 @@ class BookRoleHelperTest extends TestCase
     }
 
     /** @test */
-    public function business_owner_sees_all_books_as_accessible()
+    public function business_primary_admin_sees_all_books_as_accessible()
     {
-        // Make user business owner
-        $this->business->users()->updateExistingPivot($this->user->id, ['role' => 'owner']);
+        // Make user business primary admin
+        $this->business->users()->updateExistingPivot($this->user->id, ['role' => 'primary_admin']);
 
         // Create additional books
         $book2 = Book::factory()->create(['business_id' => $this->business->id]);

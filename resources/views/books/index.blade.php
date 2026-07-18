@@ -9,13 +9,13 @@
             @if($books->count() > 0)
                 <p style="font-size: 0.875rem; color: #a0aec0;">
                     {{ $books->count() }} {{ Str::plural('book', $books->count()) }}
-                    @if(in_array($role, ['owner', 'admin']))
+                    @if(in_array($role, ['primary_admin', 'admin']))
                         - {{ $books->where('user_has_access', true)->count() }} accessible to you
                     @endif
                 </p>
             @endif
         </div>
-        @if(in_array($role, ['owner', 'admin']))
+        @if(in_array($role, ['primary_admin', 'admin']))
         <a href="{{ route('books.create') }}" style="display: inline-flex; align-items: center; background-color: #3b82f6; color: white; padding: 0.5rem 1rem; border-radius: 0.375rem; font-weight: 600; text-decoration: none;">
             <svg style="width: 1rem; height: 1rem; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -31,20 +31,20 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
             </svg>
             <h3 style="font-size: 1.125rem; font-weight: 600; color: #1a202c; margin-bottom: 0.5rem;">
-                @if(in_array($role, ['owner', 'admin']))
+                @if(in_array($role, ['primary_admin', 'admin']))
                     No books yet
                 @else
                     No books assigned to you
                 @endif
             </h3>
             <p style="font-size: 0.875rem; color: #a0aec0; margin-bottom: 1.5rem;">
-                @if(in_array($role, ['owner', 'admin']))
+                @if(in_array($role, ['primary_admin', 'admin']))
                     Get started by creating your first book to organize your transactions.
                 @else
                     Contact your administrator to get access to books.
                 @endif
             </p>
-            @if(in_array($role, ['owner', 'admin']))
+            @if(in_array($role, ['primary_admin', 'admin']))
             <a href="{{ route('books.create') }}" style="display: inline-flex; align-items: center; background-color: #3b82f6; color: white; padding: 0.5rem 1rem; border-radius: 0.375rem; font-weight: 600; text-decoration: none;">
                 <svg style="width: 1rem; height: 1rem; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -70,7 +70,7 @@
                                     <span style="font-size: 0.75rem; color: #a0aec0;">#{{ $book->id }}</span>
                                 </div>
                             </div>
-                            @if(in_array($role, ['owner', 'admin']))
+                            @if(in_array($role, ['primary_admin', 'admin']))
                                 @if($book->user_has_access)
                                     <span style="background-color: #48bb78; color: white; font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 0.375rem;">You have access</span>
                                 @else
@@ -105,7 +105,7 @@
                     <div style="background: #f7fafc; padding: 0.75rem 1.5rem; border-top: 1px solid #e2e8f0;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <span style="font-size: 0.75rem; color: #a0aec0;">Last updated {{ $book->updated_at->diffForHumans() }}</span>
-                            @if(in_array($role, ['owner', 'admin']))
+                            @if(in_array($role, ['primary_admin', 'admin']))
                             <div style="display: flex; gap: 0.5rem;">
                                 @if(!$book->user_has_access)
                                     <a href="{{ route('books.users', $book) }}" style="background-color: #edf2f7; color: #4a5568; padding: 0.25rem 0.5rem; border-radius: 0.375rem; display: inline-flex; align-items: center; text-decoration: none;" title="Manage access">

@@ -44,14 +44,14 @@ class BookRoleAccessTest extends TestCase
         $this->viewerUser = User::factory()->create(['name' => 'Viewer User']);
 
         // Attach users to business
-        $this->business->users()->attach($this->managerUser->id, ['role' => 'staff']);
-        $this->business->users()->attach($this->editorUser->id, ['role' => 'staff']);
-        $this->business->users()->attach($this->viewerUser->id, ['role' => 'staff']);
+        $this->business->users()->attach($this->managerUser->id, ['role' => 'employee']);
+        $this->business->users()->attach($this->editorUser->id, ['role' => 'employee']);
+        $this->business->users()->attach($this->viewerUser->id, ['role' => 'employee']);
 
         // Attach users to book with different roles
-        $this->book->users()->attach($this->managerUser->id, ['role' => 'manager']);
-        $this->book->users()->attach($this->editorUser->id, ['role' => 'editor']);
-        $this->book->users()->attach($this->viewerUser->id, ['role' => 'viewer']);
+        $this->book->users()->attach($this->managerUser->id, ['role' => 'primary_admin']);
+        $this->book->users()->attach($this->editorUser->id, ['role' => 'employee']);
+        $this->book->users()->attach($this->viewerUser->id, ['role' => 'employee']);
 
         // Create test category
         $this->category = Category::factory()->create([
@@ -106,7 +106,7 @@ class BookRoleAccessTest extends TestCase
     public function user_without_book_access_cannot_view_book()
     {
         $unauthorizedUser = User::factory()->create(['name' => 'Unauthorized User']);
-        $this->business->users()->attach($unauthorizedUser->id, ['role' => 'staff']);
+        $this->business->users()->attach($unauthorizedUser->id, ['role' => 'employee']);
 
         $this->actingAs($unauthorizedUser);
 
@@ -459,7 +459,7 @@ class BookRoleAccessTest extends TestCase
     public function book_user_management_works_correctly()
     {
         $businessOwner = User::factory()->create(['name' => 'Business Owner']);
-        $this->business->users()->attach($businessOwner->id, ['role' => 'owner']);
+        $this->business->users()->attach($businessOwner->id, ['role' => 'primary_admin']);
 
         $this->actingAs($businessOwner);
 
@@ -468,15 +468,15 @@ class BookRoleAccessTest extends TestCase
         $response->assertStatus(200);
 
         $bookUsers = $response->json()['bookUsers'];
-        $this->assertCount(3, $bookUsers); // manager, editor, viewer
+        $this->assertCount(3, $bookUsers); // primary_admin, employee, employee
 
         // Test adding new user to book
         $newUser = User::factory()->create(['name' => 'New User']);
-        $this->business->users()->attach($newUser->id, ['role' => 'staff']);
+        $this->business->users()->attach($newUser->id, ['role' => 'employee']);
 
         $response = $this->postJson(route('books.users.invite', $this->book), [
             'user_id' => $newUser->id,
-            'role' => 'editor'
+            'role' => 'employee'
         ]);
 
         $response->assertStatus(200);
@@ -485,12 +485,12 @@ class BookRoleAccessTest extends TestCase
         $this->assertDatabaseHas('book_user', [
             'book_id' => $this->book->id,
             'user_id' => $newUser->id,
-            'role' => 'editor'
+            'role' => 'employee'
         ]);
 
         // Test updating user role
         $response = $this->putJson(route('books.users.role', [$this->book, $newUser]), [
-            'role' => 'manager'
+            'role' => 'primary_admin'
         ]);
 
         $response->assertStatus(200);
@@ -498,7 +498,7 @@ class BookRoleAccessTest extends TestCase
         $this->assertDatabaseHas('book_user', [
             'book_id' => $this->book->id,
             'user_id' => $newUser->id,
-            'role' => 'manager'
+            'role' => 'primary_admin'
         ]);
 
         // Test removing user from book
@@ -516,7 +516,7 @@ class BookRoleAccessTest extends TestCase
     public function user_search_functionality_works()
     {
         $businessOwner = User::factory()->create(['name' => 'Business Owner']);
-        $this->business->users()->attach($businessOwner->id, ['role' => 'owner']);
+        $this->business->users()->attach($businessOwner->id, ['role' => 'primary_admin']);
 
         // Create a user not in business
         $externalUser = User::factory()->create([

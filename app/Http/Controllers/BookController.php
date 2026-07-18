@@ -16,10 +16,10 @@ class BookController extends Controller
         $user = $request->user();
 
         // Get user's role in the business
-        $role = $user->businesses()->where('business_id', $business->id)->value('role');
+        $role = $user->getBusinessRole($business);
 
-       if (in_array($role, ['owner', 'admin'])) {
-    // Owners and admins can see all books with access information
+       if (in_array($role, ['primary_admin', 'admin'])) {
+    // Primary admins and admins can see all books with access information
     $allBooks = Book::where('business_id', $business->id)->latest('updated_at')->get();
     $userBookIds = $user->books()->where('business_id', $business->id)->pluck('books.id')->toArray();
 
@@ -29,13 +29,13 @@ class BookController extends Controller
         return $book;
     });
         } else {
-    // Staff can only see books they are assigned to
+    // Employees can only see books they are assigned to
     $assignedBookIds = $user->books()->where('business_id', $business->id)->pluck('books.id');
     $books = Book::where('business_id', $business->id)
                 ->whereIn('id', $assignedBookIds)
                 ->latest('updated_at')->get();
 
-    // For staff, all visible books have access
+    // For employees, all visible books have access
     $books = $books->map(function($book) {
         $book->user_has_access = true;
         $book->hashId = CommonHelper::encodeId($book->id);
@@ -59,8 +59,10 @@ class BookController extends Controller
 
         $book = Book::create($data + ['business_id' => $business->id]);
 
-        // Add the current user as a manager of the newly created book
-        $book->users()->attach($request->user()->id, ['role' => 'manager']);
+        // Add the current user as a primary admin of the newly created book
+        $book->users()->syncWithoutDetaching([
+            $request->user()->id => ['role' => 'primary_admin'],
+        ]);
 
         return redirect()->route('books.index');
     }
@@ -104,8 +106,8 @@ class BookController extends Controller
         // $businessRole = $user->businesses()->where('business_id', $business->id)->value('role');
 
         // // Determine user's role for this specific book
-        // if (in_array($businessRole, ['owner', 'admin'])) {
-        //     $bookRole = 'manager'; // Business owners/admins have manager-level access
+        // if (in_array($businessRole, ['primary_admin', 'admin'])) {
+        //     $bookRole = 'primary_admin'; // Business primary_admins/admins have primary_admin-level access
         // } else {
         //     $bookUser = $user->books()->where('books.id', $book->id)->first();
         //     $bookRole = $bookUser ? $bookUser->pivot->role : null;
@@ -312,8 +314,8 @@ class BookController extends Controller
         $businessRole = $user->businesses()->where('business_id', $business->id)->value('role');
 
         // Determine user's role for this specific book
-        if (in_array($businessRole, ['owner', 'admin'])) {
-            $bookRole = 'manager'; // Business owners/admins have manager-level access
+        if (in_array($businessRole, ['primary_admin', 'admin'])) {
+            $bookRole = 'primary_admin'; // Business primary_admins/admins have primary_admin-level access
         } else {
             $bookUser = $user->books()->where('books.id', $transaction->book_id)->first();
             $bookRole = $bookUser ? $bookUser->pivot->role : null;
@@ -326,17 +328,17 @@ class BookController extends Controller
             $buttons .= '<a href="/transactions/' . $transaction->id . '/receipt" style="color: var(--primary-color); text-decoration: none; margin-right: 0.5rem;">Receipt</a>';
         }
 
-        // Edit/Delete buttons - only for managers, or editors/managers for their own transactions
+        // Edit/Delete buttons - only for primary_admins, or admins for their own transactions
         $canEdit = false;
 
-        if ($bookRole === 'manager') {
-            // Managers can edit/delete any transaction
+        if ($bookRole === 'primary_admin') {
+            // Primary admins can edit/delete any transaction
             $canEdit = true;
-        } elseif ($bookRole === 'editor' && $transaction->user_id === $user->id) {
-            // Editors can only edit/delete their own transactions
+        } elseif ($bookRole === 'admin' && $transaction->user_id === $user->id) {
+            // Admins can only edit/delete their own transactions
             $canEdit = true;
         }
-        // Viewers cannot edit/delete anything
+        // Employees cannot edit/delete anything
 
         if ($canEdit) {
             $buttons .= '<button onclick="editTransaction(' . $transaction->id . ')" style="background: none; border: none; color: var(--primary-color); cursor: pointer; text-decoration: none; margin-right: 0.5rem;">Edit</button>';
@@ -390,10 +392,10 @@ class BookController extends Controller
         abort_unless($book->business_id === $business->id, 404);
         $this->authorize('update', $book);
 
-        // Check if user has owner or admin role
+        // Check if user has primary_admin or admin role
         $user = $request->user();
         $role = $user->getBookRole($book);
-        if ($role !== 'manager') {
+        if (!in_array($role, ['primary_admin', 'admin'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized'
@@ -447,7 +449,7 @@ class BookController extends Controller
 
         $data = $request->validate([
             'user_id' => 'required|exists:users,id',
-            'role' => 'required|in:manager,editor,viewer'
+            'role' => 'required|in:primary_admin,admin,employee'
         ]);
 
         // Check if user is already assigned to this book
@@ -461,8 +463,8 @@ class BookController extends Controller
         // Check if user is a member of the business, if not, add them
         $businessUser = $business->users()->where('users.id', $data['user_id'])->first();
         if (!$businessUser) {
-            // Add user to business with 'staff' role as default
-            $business->users()->attach($data['user_id'], ['role' => 'staff']);
+            // Add user to business with 'employee' role as default
+            $business->users()->attach($data['user_id'], ['role' => 'employee']);
         }
 
         // Add user to the book with specified role
@@ -485,7 +487,7 @@ class BookController extends Controller
         $this->authorize('update', $book);
 
         $data = $request->validate([
-            'role' => 'required|in:manager,editor,viewer'
+            'role' => 'required|in:primary_admin,admin,employee'
         ]);
 
         // Check if user is assigned to this book
@@ -496,11 +498,11 @@ class BookController extends Controller
             ], 404);
         }
 
-        // if the user is the owner of the business, they cannot have their role changed
-        if ($user->businesses()->where('business_id', $business->id)->value('role') === 'owner') {
+        // if the user is the primary_admin of the business, they cannot have their role changed
+        if ($user->getBusinessRole($business) === 'primary_admin') {
             return response()->json([
                 'success' => false,
-                'message' => 'Cannot change role of business owner'
+                'message' => 'Cannot change role of business primary_admin'
             ], 403);
         }
 
@@ -530,11 +532,11 @@ class BookController extends Controller
             ], 404);
         }
 
-        // if the user is the owner of the business, they cannot be removed from the book
-        if ($user->businesses()->where('business_id', $business->id)->value('role') === 'owner') {
+        // if the user is the primary_admin of the business, they cannot be removed from the book
+        if ($user->getBusinessRole($business) === 'primary_admin') {
             return response()->json([
                 'success' => false,
-                'message' => 'Cannot remove business owner from book'
+                'message' => 'Cannot remove business primary_admin from book'
             ], 403);
         }
 

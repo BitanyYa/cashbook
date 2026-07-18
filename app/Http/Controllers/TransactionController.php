@@ -23,7 +23,7 @@ class TransactionController extends Controller
         $role = $user->businesses()->where('business_id', $business->id)->value('role');
 
         $query = Transaction::where('business_id', $business->id)->with(['book','category','user']);
-        if ($role === 'staff') {
+        if ($role === 'employee') {
             $assignedBookIds = $user->belongsToMany(Book::class, 'book_user')->pluck('books.id');
             $query->whereIn('book_id', $assignedBookIds);
         }
@@ -43,15 +43,15 @@ class TransactionController extends Controller
         $user = $request->user();
         $businessRole = $user->businesses()->where('business_id', $business->id)->value('role');
 
-        // Get books where user can add transactions (exclude viewer-only access)
-        if (in_array($businessRole, ['owner', 'admin'])) {
-            // Business owners and admins can add transactions to any book
+        // Get books where user can add transactions (exclude employee-only access)
+        if (in_array($businessRole, ['primary_admin', 'admin'])) {
+            // Primary admins and admins can add transactions to any book
             $books = Book::where('business_id', $business->id)->get();
         } else {
-            // For staff, only include books where they have editor or manager role
+            // For employees, only include books where they have book-level access
             $bookIds = $user->books()
                 ->where('business_id', $business->id)
-                ->wherePivotIn('role', ['manager', 'editor'])
+                ->wherePivotIn('role', ['primary_admin', 'admin', 'employee'])
                 ->pluck('books.id');
 
             $books = Book::where('business_id', $business->id)
@@ -109,12 +109,12 @@ class TransactionController extends Controller
         abort_unless($book->business_id === $business->id, 404);
 
         // Determine user's access and role for this book
-        if (in_array($businessRole, ['owner', 'admin'])) {
-            // Business owners and admins always have manager-level access to all books
-            $bookRole = 'manager';
+        if (in_array($businessRole, ['primary_admin', 'admin'])) {
+            // Primary admins and admins always have primary_admin-level access to all books
+            $bookRole = 'primary_admin';
             $hasAccess = true;
         } else {
-            // For staff, check their specific role in this book
+            // For employees, check their specific role in this book
             $bookUser = $user->books()->where('books.id', $data['book_id'])->first();
 
             if (!$bookUser) {
@@ -126,15 +126,15 @@ class TransactionController extends Controller
         }
 
         // Check permissions based on book role
-        if ($bookRole === 'viewer') {
-            abort(403, 'Viewers cannot add transactions to this book');
+        if ($bookRole === 'employee') {
+            // Employees may still create transactions, but their status is pending
         }
 
         // Set transaction status based on book role
         $status = match($bookRole) {
-            'manager' => 'approved',  // Managers can approve their own transactions
-            'editor' => 'pending',    // Editors need approval
-            default => 'pending'      // Default to pending for safety
+            'primary_admin', 'admin' => 'approved',
+            'employee' => 'pending',
+            default => 'pending'
         };
 
         $transaction = new Transaction([
@@ -174,9 +174,9 @@ class TransactionController extends Controller
         // update book updated_at timestamp
         $book->touch();
 
-        // Notify admins/owners when transaction needs approval (status is pending)
+        // Notify admins when transaction needs approval (status is pending)
         if ($status === 'pending') {
-            $notifiables = $business->users()->wherePivotIn('role', ['owner','admin'])->get();
+            $notifiables = $business->users()->wherePivotIn('role', ['primary_admin','admin'])->get();
             foreach ($notifiables as $n) {
                 if (method_exists($n, 'wantsNotification') ? $n->wantsNotification('transaction_submitted') : true) {
                     $n->notify(new TransactionSubmitted($transaction));
@@ -210,7 +210,7 @@ class TransactionController extends Controller
         $user = $request->user();
         $businessRole = $user->businesses()->where('business_id', $business->id)->value('role');
 
-        if (in_array($businessRole, ['owner', 'admin'])) {
+        if (in_array($businessRole, ['primary_admin', 'admin'])) {
             $canEdit = true;
         } else {
             $bookUser = $user->books()->where('books.id', $transaction->book_id)->first();
@@ -228,7 +228,7 @@ class TransactionController extends Controller
             $bookRole = $bookUser->pivot->role;
 
             // Correct combined logic
-            $canEdit = in_array($bookRole, ['manager']) || ($bookRole === 'editor' && $transaction->user_id === $user->id);
+            $canEdit = in_array($bookRole, ['primary_admin', 'admin']) || ($bookRole === 'employee' && $transaction->user_id === $user->id);
 
             if (!$canEdit) {
                 Log::info('User does not have permission to edit this transaction', [
@@ -274,11 +274,11 @@ class TransactionController extends Controller
         $businessRole = $user->businesses()->where('business_id', $business->id)->value('role');
 
         // Check book-level permissions
-        if (in_array($businessRole, ['owner', 'admin'])) {
-            // Business owners and admins can edit any transaction
+        if (in_array($businessRole, ['primary_admin', 'admin'])) {
+            // Primary admins and admins can edit any transaction
             $canEdit = true;
         } else {
-            // For staff, check their role in the specific book
+            // For employees, check their role in the specific book
             $bookUser = $user->books()->where('books.id', $transaction->book_id)->first();
 
             if (!$bookUser) {
@@ -287,8 +287,8 @@ class TransactionController extends Controller
 
             $bookRole = $bookUser->pivot->role;
 
-            // Only manager and editor can edit, and only their own transactions
-            $canEdit = in_array($bookRole, ['manager']) || ($bookRole === 'editor' && $transaction->user_id === $user->id);
+            // Primary admins/admins can edit any transaction; employees can edit only their own
+            $canEdit = in_array($bookRole, ['primary_admin', 'admin']) || ($bookRole === 'employee' && $transaction->user_id === $user->id);
         }
 
         abort_unless($canEdit, 403);
@@ -358,11 +358,11 @@ class TransactionController extends Controller
         $businessRole = $user->businesses()->where('business_id', $business->id)->value('role');
 
         // Check book-level permissions
-        if (in_array($businessRole, ['owner', 'admin'])) {
-            // Business owners and admins can delete any transaction
+        if (in_array($businessRole, ['primary_admin', 'admin'])) {
+            // Primary admins and admins can delete any transaction
             $canDelete = true;
         } else {
-            // For staff, check their role in the specific book
+            // For employees, check their role in the specific book
             $bookUser = $user->books()->where('books.id', $transaction->book_id)->first();
 
             if (!$bookUser) {
@@ -371,8 +371,8 @@ class TransactionController extends Controller
 
             $bookRole = $bookUser->pivot->role;
 
-            // Only manager and editor can delete, and only their own transactions
-            $canDelete = in_array($bookRole, ['manager']) || ($bookRole === 'editor' && $transaction->user_id === $user->id);
+            // Primary admins/admins can delete any transaction; employees can delete only their own
+            $canDelete = in_array($bookRole, ['primary_admin', 'admin']) || ($bookRole === 'employee' && $transaction->user_id === $user->id);
         }
 
         abort_unless($canDelete, 403);
@@ -433,13 +433,13 @@ class TransactionController extends Controller
             $businessRole = $user->businesses()->where('business_id', $business->id)->value('role');
             $canDelete = false;
 
-            if (in_array($businessRole, ['owner', 'admin'])) {
+            if (in_array($businessRole, ['primary_admin', 'admin'])) {
                 $canDelete = true;
             } else {
                 $bookUser = $user->books()->where('books.id', $transaction->book_id)->first();
                 if ($bookUser) {
                     $bookRole = $bookUser->pivot->role;
-                    if (in_array($bookRole, ['manager']) || ($bookRole === 'editor' && $transaction->user_id === $user->id)) {
+                    if (in_array($bookRole, ['primary_admin', 'admin']) || ($bookRole === 'employee' && $transaction->user_id === $user->id)) {
                         $canDelete = true;
                     }
                 }
@@ -556,7 +556,7 @@ class TransactionController extends Controller
         abort_unless($transaction->business_id === $business->id, 404);
         $user = $request->user();
         $role = $user->businesses()->where('business_id', $business->id)->value('role');
-        if ($role === 'staff') {
+        if ($role === 'employee') {
             abort_unless($user->belongsToMany(Book::class, 'book_user')->where('books.id', $transaction->book_id)->exists(), 403);
         }
         abort_unless($transaction->image_path && Storage::exists($transaction->image_path), 404);
@@ -572,7 +572,7 @@ class TransactionController extends Controller
         $role = $user->businesses()->where('business_id', $business->id)->value('role');
 
         // Check permissions
-        if ($role === 'staff') {
+        if ($role === 'employee') {
             $assigned = $user->belongsToMany(Book::class, 'book_user')->where('books.id', $transaction->book_id)->exists();
             abort_unless($assigned, 403);
         }

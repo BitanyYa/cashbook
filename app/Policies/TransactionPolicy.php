@@ -10,21 +10,21 @@ class TransactionPolicy
     public function approve(User $user, Transaction $transaction): bool
     {
         // Check business-level permissions first
-        $businessRole = $user->businesses()->where('business_id', $transaction->business_id)->value('role');
-        if (in_array($businessRole, ['owner', 'admin'])) {
+        $businessRole = $user->getBusinessRole($transaction->business);
+        if (in_array($businessRole, ['primary_admin', 'admin'])) {
             return true;
         }
 
         // Check book-level permissions
         $bookRole = $user->getBookRole($transaction->book);
-        return $bookRole === 'manager';
+        return in_array($bookRole, ['primary_admin', 'admin']);
     }
 
     public function view(User $user, Transaction $transaction): bool
     {
         // Check business-level permissions first
-        $businessRole = $user->businesses()->where('business_id', $transaction->business_id)->value('role');
-        if (in_array($businessRole, ['owner', 'admin'])) {
+        $businessRole = $user->getBusinessRole($transaction->business);
+        if (in_array($businessRole, ['primary_admin', 'admin'])) {
             return true;
         }
 
@@ -35,21 +35,21 @@ class TransactionPolicy
     public function update(User $user, Transaction $transaction): bool
     {
         // Check business-level permissions first
-        $businessRole = $user->businesses()->where('business_id', $transaction->business_id)->value('role');
-        if (in_array($businessRole, ['owner', 'admin'])) {
+        $businessRole = $user->getBusinessRole($transaction->business);
+        if (in_array($businessRole, ['primary_admin', 'admin'])) {
             return true;
         }
 
         // Check book-level permissions
         $bookRole = $user->getBookRole($transaction->book);
 
-        // Managers can edit any transaction
-        if ($bookRole === 'manager') {
+        // Primary admins and admins can edit any transaction
+        if (in_array($bookRole, ['primary_admin', 'admin'])) {
             return true;
         }
 
-        // Editors can only edit their own transactions
-        if ($bookRole === 'editor') {
+        // Employees can only edit their own transactions
+        if ($bookRole === 'employee') {
             return $transaction->user_id === $user->id;
         }
 
@@ -59,21 +59,21 @@ class TransactionPolicy
     public function delete(User $user, Transaction $transaction): bool
     {
         // Check business-level permissions first
-        $businessRole = $user->businesses()->where('business_id', $transaction->business_id)->value('role');
-        if (in_array($businessRole, ['owner', 'admin'])) {
+        $businessRole = $user->getBusinessRole($transaction->business);
+        if (in_array($businessRole, ['primary_admin', 'admin'])) {
             return true;
         }
 
         // Check book-level permissions
         $bookRole = $user->getBookRole($transaction->book);
 
-        // Managers can delete any transaction
-        if ($bookRole === 'manager') {
+        // Primary admins and admins can delete any transaction
+        if (in_array($bookRole, ['primary_admin', 'admin'])) {
             return true;
         }
 
-        // Editors can only delete their own transactions
-        if ($bookRole === 'editor') {
+        // Employees can only delete their own transactions
+        if ($bookRole === 'employee') {
             return $transaction->user_id === $user->id;
         }
 

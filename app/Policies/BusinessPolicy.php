@@ -10,14 +10,14 @@ class BusinessPolicy
 {
     public function update(User $user, Business $business): bool
     {
-        $role = $user->businesses()->where('business_id', $business->id)->value('role');
-        return in_array($role, ['owner','admin']);
+        $role = $user->getBusinessRole($business);
+        return in_array($role, ['primary_admin','admin']);
     }
 
     public function delete(User $user, Business $business): bool
     {
-        $role = $user->businesses()->where('business_id', $business->id)->value('role');
-        return $role === 'owner';
+        $role = $user->getBusinessRole($business);
+        return $role === 'primary_admin';
     }
 
     public function view(User $user, Business $business): bool

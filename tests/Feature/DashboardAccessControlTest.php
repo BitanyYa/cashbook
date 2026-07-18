@@ -16,8 +16,8 @@ class DashboardAccessControlTest extends TestCase
     protected $business;
     protected $book1;
     protected $book2;
-    protected $staffUser;
-    protected $ownerUser;
+    protected $employeeUser;
+    protected $primaryAdminUser;
 
     protected function setUp(): void
     {
@@ -41,30 +41,30 @@ class DashboardAccessControlTest extends TestCase
         ]);
 
         // Create users
-        $this->staffUser = User::factory()->create(['name' => 'Staff User']);
-        $this->ownerUser = User::factory()->create(['name' => 'Owner User']);
+        $this->employeeUser = User::factory()->create(['name' => 'Employee User']);
+        $this->primaryAdminUser = User::factory()->create(['name' => 'Primary Admin User']);
 
         // Attach users to business
-        $this->business->users()->attach($this->staffUser->id, ['role' => 'staff']);
-        $this->business->users()->attach($this->ownerUser->id, ['role' => 'owner']);
+        $this->business->users()->attach($this->employeeUser->id, ['role' => 'employee']);
+        $this->business->users()->attach($this->primaryAdminUser->id, ['role' => 'primary_admin']);
 
-        // Give staff user access to only book1
-        $this->book1->users()->attach($this->staffUser->id, ['role' => 'editor']);
+        // Give employee user access to only book1
+        $this->book1->users()->attach($this->employeeUser->id, ['role' => 'employee']);
 
-        // Owner has access to all books by default
+        // Primary admin has access to all books by default
 
         // Set active business in session
         $this->session(['active_business_id' => $this->business->id]);
     }
 
     /** @test */
-    public function owner_sees_all_books_in_dashboard()
+    public function primary_admin_sees_all_books_in_dashboard()
     {
         // Create transactions in both books
         Transaction::factory()->create([
             'business_id' => $this->business->id,
             'book_id' => $this->book1->id,
-            'user_id' => $this->ownerUser->id,
+            'user_id' => $this->primaryAdminUser->id,
             'type' => 'income',
             'amount' => 1000,
             'status' => 'approved'
@@ -73,13 +73,13 @@ class DashboardAccessControlTest extends TestCase
         Transaction::factory()->create([
             'business_id' => $this->business->id,
             'book_id' => $this->book2->id,
-            'user_id' => $this->ownerUser->id,
+            'user_id' => $this->primaryAdminUser->id,
             'type' => 'expense',
             'amount' => 500,
             'status' => 'approved'
         ]);
 
-        $this->actingAs($this->ownerUser);
+        $this->actingAs($this->primaryAdminUser);
 
         $response = $this->get(route('dashboard'));
 
@@ -91,13 +91,13 @@ class DashboardAccessControlTest extends TestCase
     }
 
     /** @test */
-    public function staff_user_sees_only_accessible_books_in_dashboard()
+    public function employee_user_sees_only_accessible_books_in_dashboard()
     {
         // Create transactions in both books
         Transaction::factory()->create([
             'business_id' => $this->business->id,
             'book_id' => $this->book1->id,
-            'user_id' => $this->staffUser->id,
+            'user_id' => $this->employeeUser->id,
             'type' => 'income',
             'amount' => 1000,
             'status' => 'pending'
@@ -106,13 +106,13 @@ class DashboardAccessControlTest extends TestCase
         Transaction::factory()->create([
             'business_id' => $this->business->id,
             'book_id' => $this->book2->id,
-            'user_id' => $this->ownerUser->id,
+            'user_id' => $this->primaryAdminUser->id,
             'type' => 'expense',
             'amount' => 500,
             'status' => 'approved'
         ]);
 
-        $this->actingAs($this->staffUser);
+        $this->actingAs($this->employeeUser);
 
         $response = $this->get(route('dashboard'));
 
@@ -128,12 +128,12 @@ class DashboardAccessControlTest extends TestCase
     }
 
     /** @test */
-    public function staff_user_without_book_access_sees_no_data_message()
+    public function employee_user_without_book_access_sees_no_data_message()
     {
-        // Remove staff user from all books
-        $this->book1->users()->detach($this->staffUser->id);
+        // Remove employee user from all books
+        $this->book1->users()->detach($this->employeeUser->id);
 
-        $this->actingAs($this->staffUser);
+        $this->actingAs($this->employeeUser);
 
         $response = $this->get(route('dashboard'));
 
@@ -145,7 +145,7 @@ class DashboardAccessControlTest extends TestCase
     /** @test */
     public function sidebar_shows_only_accessible_books()
     {
-        $this->actingAs($this->staffUser);
+        $this->actingAs($this->employeeUser);
 
         $response = $this->get(route('dashboard'));
 
@@ -155,13 +155,13 @@ class DashboardAccessControlTest extends TestCase
     }
 
     /** @test */
-    public function book_creator_automatically_becomes_manager()
+    public function book_creator_automatically_becomes_primary_admin()
     {
-        $this->actingAs($this->staffUser);
+        $this->actingAs($this->employeeUser);
 
         $bookData = [
-            'name' => 'New Book by Staff',
-            'description' => 'Book created by staff user'
+            'name' => 'New Book by Employee',
+            'description' => 'Book created by employee user'
         ];
 
         $response = $this->post(route('books.store'), $bookData);
@@ -169,14 +169,14 @@ class DashboardAccessControlTest extends TestCase
         $response->assertRedirect();
 
         // Check that the book was created
-        $newBook = Book::where('name', 'New Book by Staff')->first();
+        $newBook = Book::where('name', 'New Book by Employee')->first();
         $this->assertNotNull($newBook);
 
-        // Check that the creator is automatically assigned as manager
+        // Check that the creator is automatically assigned as primary_admin
         $this->assertDatabaseHas('book_user', [
             'book_id' => $newBook->id,
-            'user_id' => $this->staffUser->id,
-            'role' => 'manager'
+            'user_id' => $this->employeeUser->id,
+            'role' => 'primary_admin'
         ]);
     }
 
@@ -187,7 +187,7 @@ class DashboardAccessControlTest extends TestCase
         $book1Transaction = Transaction::factory()->create([
             'business_id' => $this->business->id,
             'book_id' => $this->book1->id,
-            'user_id' => $this->staffUser->id,
+            'user_id' => $this->employeeUser->id,
             'type' => 'income',
             'amount' => 1000,
             'status' => 'approved',
@@ -197,14 +197,14 @@ class DashboardAccessControlTest extends TestCase
         $book2Transaction = Transaction::factory()->create([
             'business_id' => $this->business->id,
             'book_id' => $this->book2->id,
-            'user_id' => $this->ownerUser->id,
+            'user_id' => $this->primaryAdminUser->id,
             'type' => 'income',
             'amount' => 2000,
             'status' => 'approved',
             'transaction_date' => now()->toDateString()
         ]);
 
-        $this->actingAs($this->staffUser);
+        $this->actingAs($this->employeeUser);
 
         $response = $this->get(route('dashboard'));
 
@@ -215,7 +215,7 @@ class DashboardAccessControlTest extends TestCase
         $this->assertEquals(1000, $totalIncome); // Only book1 transaction
 
         // Owner should see all transactions
-        $this->actingAs($this->ownerUser);
+        $this->actingAs($this->primaryAdminUser);
         $response = $this->get(route('dashboard'));
 
         $totalIncome = $response->viewData('totalIncome');
@@ -229,7 +229,7 @@ class DashboardAccessControlTest extends TestCase
         $book1Transaction = Transaction::factory()->create([
             'business_id' => $this->business->id,
             'book_id' => $this->book1->id,
-            'user_id' => $this->staffUser->id,
+            'user_id' => $this->employeeUser->id,
             'type' => 'income',
             'amount' => 1000,
             'status' => 'approved',
@@ -240,7 +240,7 @@ class DashboardAccessControlTest extends TestCase
         $book2Transaction = Transaction::factory()->create([
             'business_id' => $this->business->id,
             'book_id' => $this->book2->id,
-            'user_id' => $this->ownerUser->id,
+            'user_id' => $this->primaryAdminUser->id,
             'type' => 'income',
             'amount' => 2000,
             'status' => 'approved',
@@ -248,7 +248,7 @@ class DashboardAccessControlTest extends TestCase
             'transaction_date' => now()->toDateString()
         ]);
 
-        $this->actingAs($this->staffUser);
+        $this->actingAs($this->employeeUser);
 
         $response = $this->get(route('dashboard'));
 

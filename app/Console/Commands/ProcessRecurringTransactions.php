@@ -42,8 +42,8 @@ class ProcessRecurringTransactions extends Command
                 'details' => ['recurring_id' => $r->id],
             ]);
 
-            // Notify admins/owners of the business
-            $notifiables = $r->business->users()->wherePivotIn('role', ['owner','admin'])->get();
+            // Notify admins of the business
+            $notifiables = $r->business->users()->wherePivotIn('role', ['primary_admin','admin'])->get();
             foreach ($notifiables as $n) {
                 if (method_exists($n, 'wantsNotification') ? $n->wantsNotification('recurring_executed') : true) {
                     $n->notify(new RecurringExecuted($t));

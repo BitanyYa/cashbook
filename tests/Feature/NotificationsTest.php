@@ -28,27 +28,27 @@ class NotificationsTest extends TestCase
     {
         Notification::fake();
 
-    /** @var User $owner */
-    $owner = User::factory()->create();
-    /** @var User $staff */
-    $staff = User::factory()->create();
+    /** @var User $primaryAdmin */
+    $primaryAdmin = User::factory()->create();
+    /** @var User $employee */
+    $employee = User::factory()->create();
 
         $business = Business::create(['name' => 'Acme', 'currency' => 'USD']);
-        $business->users()->attach($owner->id, ['role' => 'owner']);
-        $business->users()->attach($staff->id, ['role' => 'staff']);
+        $business->users()->attach($primaryAdmin->id, ['role' => 'primary_admin']);
+        $business->users()->attach($employee->id, ['role' => 'employee']);
 
         $book = Book::create(['name' => 'Main', 'business_id' => $business->id]);
-        // Assign staff to the book
+        // Assign employee to the book
         DB::table('book_user')->insert([
             'book_id' => $book->id,
-            'user_id' => $staff->id,
+            'user_id' => $employee->id,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
         $category = Category::create(['name' => 'Sales', 'type' => 'income', 'business_id' => $business->id]);
 
-        $this->actingAs($staff)
+        $this->actingAs($employee)
             ->withSession(['active_business_id' => $business->id])
             ->post(route('transactions.store'), [
                 'book_id' => $book->id,
@@ -59,11 +59,11 @@ class NotificationsTest extends TestCase
                 'description' => 'Test submission',
             ])->assertRedirect(route('transactions.index'));
 
-        Notification::assertSentTo($owner, TransactionSubmitted::class);
+        Notification::assertSentTo($primaryAdmin, TransactionSubmitted::class);
 
         $this->assertDatabaseHas('transactions', [
             'business_id' => $business->id,
-            'user_id' => $staff->id,
+            'user_id' => $employee->id,
             'status' => 'pending',
             'amount' => 100,
         ]);
@@ -73,13 +73,13 @@ class NotificationsTest extends TestCase
     {
         Notification::fake();
 
-    /** @var User $owner */
-    $owner = User::factory()->create();
-    /** @var User $staff */
-    $staff = User::factory()->create();
+    /** @var User $primaryAdmin */
+    $primaryAdmin = User::factory()->create();
+    /** @var User $employee */
+    $employee = User::factory()->create();
         $business = Business::create(['name' => 'Acme', 'currency' => 'USD']);
-        $business->users()->attach($owner->id, ['role' => 'owner']);
-        $business->users()->attach($staff->id, ['role' => 'staff']);
+        $business->users()->attach($primaryAdmin->id, ['role' => 'primary_admin']);
+        $business->users()->attach($employee->id, ['role' => 'employee']);
         $book = Book::create(['name' => 'Main', 'business_id' => $business->id]);
         $category = Category::create(['name' => 'Ops', 'type' => 'expense', 'business_id' => $business->id]);
 
@@ -87,19 +87,19 @@ class NotificationsTest extends TestCase
             'business_id' => $business->id,
             'book_id' => $book->id,
             'category_id' => $category->id,
-            'user_id' => $staff->id,
+            'user_id' => $employee->id,
             'amount' => 50,
             'type' => 'expense',
             'status' => 'pending',
             'transaction_date' => Carbon::today(),
         ]);
 
-        $this->actingAs($owner)
+        $this->actingAs($primaryAdmin)
             ->withSession(['active_business_id' => $business->id])
             ->post(route('transactions.approve', $tx))
             ->assertRedirect();
 
-        Notification::assertSentTo($staff, TransactionApproved::class);
+        Notification::assertSentTo($employee, TransactionApproved::class);
 
         $this->assertDatabaseHas('transactions', [
             'id' => $tx->id,
@@ -111,13 +111,13 @@ class NotificationsTest extends TestCase
     {
         Notification::fake();
 
-    /** @var User $owner */
-    $owner = User::factory()->create();
-    /** @var User $staff */
-    $staff = User::factory()->create();
+    /** @var User $primaryAdmin */
+    $primaryAdmin = User::factory()->create();
+    /** @var User $employee */
+    $employee = User::factory()->create();
         $business = Business::create(['name' => 'Acme', 'currency' => 'USD']);
-        $business->users()->attach($owner->id, ['role' => 'owner']);
-        $business->users()->attach($staff->id, ['role' => 'staff']);
+        $business->users()->attach($primaryAdmin->id, ['role' => 'primary_admin']);
+        $business->users()->attach($employee->id, ['role' => 'employee']);
         $book = Book::create(['name' => 'Main', 'business_id' => $business->id]);
         $category = Category::create(['name' => 'Ops', 'type' => 'expense', 'business_id' => $business->id]);
 
@@ -125,19 +125,19 @@ class NotificationsTest extends TestCase
             'business_id' => $business->id,
             'book_id' => $book->id,
             'category_id' => $category->id,
-            'user_id' => $staff->id,
+            'user_id' => $employee->id,
             'amount' => 75,
             'type' => 'expense',
             'status' => 'pending',
             'transaction_date' => Carbon::today(),
         ]);
 
-        $this->actingAs($owner)
+        $this->actingAs($primaryAdmin)
             ->withSession(['active_business_id' => $business->id])
             ->post(route('transactions.reject', $tx))
             ->assertRedirect();
 
-        Notification::assertSentTo($staff, TransactionRejected::class);
+        Notification::assertSentTo($employee, TransactionRejected::class);
 
         $this->assertDatabaseHas('transactions', [
             'id' => $tx->id,
@@ -149,10 +149,10 @@ class NotificationsTest extends TestCase
     {
         Notification::fake();
 
-    /** @var User $owner */
-    $owner = User::factory()->create();
+    /** @var User $primaryAdmin */
+    $primaryAdmin = User::factory()->create();
         $business = Business::create(['name' => 'Acme', 'currency' => 'USD']);
-        $business->users()->attach($owner->id, ['role' => 'owner']);
+        $business->users()->attach($primaryAdmin->id, ['role' => 'primary_admin']);
         $book = Book::create(['name' => 'Main', 'business_id' => $business->id]);
         $category = Category::create(['name' => 'Rent', 'type' => 'expense', 'business_id' => $business->id]);
 
@@ -160,7 +160,7 @@ class NotificationsTest extends TestCase
             'business_id' => $business->id,
             'book_id' => $book->id,
             'category_id' => $category->id,
-            'user_id' => $owner->id,
+            'user_id' => $primaryAdmin->id,
             'amount' => 1000,
             'type' => 'expense',
             'frequency' => 'monthly',
@@ -170,7 +170,7 @@ class NotificationsTest extends TestCase
 
         $this->artisan('cashbook:recurring:process')->assertExitCode(0);
 
-        Notification::assertSentTo($owner, RecurringExecuted::class);
+        Notification::assertSentTo($primaryAdmin, RecurringExecuted::class);
 
         $this->assertDatabaseHas('transactions', [
             'business_id' => $business->id,

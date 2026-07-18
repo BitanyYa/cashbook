@@ -30,7 +30,7 @@ class BusinessController extends Controller
             'currency' => 'required|string|size:3',
         ]);
         $business = Business::create($data);
-        $request->user()->businesses()->attach($business->id, ['role' => 'owner']);
+        $request->user()->businesses()->attach($business->id, ['role' => 'primary_admin']);
         session(['active_business_id' => $business->id]);
         return redirect()->route('businesses.index');
     }

@@ -14,8 +14,8 @@ class BookPolicy
     {
         $role = $user->getBookRole($book);
 
-        // Managers, editors, viewers can view
-        return in_array($role, ['manager', 'editor', 'viewer']);
+        // Primary admins, admins, and employees can view books they have access to
+        return in_array($role, ['primary_admin', 'admin', 'employee']);
     }
 
     /**
@@ -23,7 +23,7 @@ class BookPolicy
      */
     public function update(User $user, Book $book): bool
     {
-        // Manager role can update (includes owner/admin)
+        // Primary admins and admins can update books
         return $user->canManageBook($book);
     }
 
@@ -32,7 +32,7 @@ class BookPolicy
      */
     public function delete(User $user, Book $book): bool
     {
-        // Manager role can delete (includes owner/admin)
+        // Primary admins and admins can delete books
         return $user->canManageBook($book);
     }
 }

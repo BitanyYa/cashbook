@@ -26,7 +26,7 @@ class TeamController extends Controller
     public function invite(Request $request)
     {
         $business = $request->attributes->get('activeBusiness');
-        $data = $request->validate(['email' => 'required|email', 'role' => 'required|in:owner,admin,staff']);
+        $data = $request->validate(['email' => 'required|email', 'role' => 'required|in:primary_admin,admin,employee']);
         $user = User::where('email', $data['email'])->first();
         if (!$user) {
             return back()->withErrors(['email' => 'User not found. Need to register first.']);
@@ -38,12 +38,12 @@ class TeamController extends Controller
     public function updateRole(Request $request, User $user)
     {
         $business = $request->attributes->get('activeBusiness');
-        $data = $request->validate(['role' => 'required|in:owner,admin,staff']);
-        // Prevent removing last owner
-        if ($data['role'] !== 'owner') {
-            $ownerCount = $business->users()->wherePivot('role','owner')->count();
-            if ($ownerCount <= 1 && $business->users()->wherePivot('role','owner')->where('users.id', $user->id)->exists()) {
-                return back()->withErrors(['role' => 'Cannot demote the last owner.']);
+        $data = $request->validate(['role' => 'required|in:primary_admin,admin,employee']);
+        // Prevent removing the last primary admin
+        if ($data['role'] !== 'primary_admin') {
+            $primaryAdminCount = $business->users()->wherePivot('role','primary_admin')->count();
+            if ($primaryAdminCount <= 1 && $business->users()->wherePivot('role','primary_admin')->where('users.id', $user->id)->exists()) {
+                return back()->withErrors(['role' => 'Cannot demote the last primary admin.']);
             }
         }
         $business->users()->updateExistingPivot($user->id, ['role' => $data['role']]);
@@ -53,11 +53,11 @@ class TeamController extends Controller
     public function remove(Request $request, User $user)
     {
         $business = $request->attributes->get('activeBusiness');
-        // Prevent removing last owner
-        if ($business->users()->wherePivot('role','owner')->where('users.id', $user->id)->exists()) {
-            $ownerCount = $business->users()->wherePivot('role','owner')->count();
-            if ($ownerCount <= 1) {
-                return back()->withErrors(['member' => 'Cannot remove the last owner.']);
+        // Prevent removing the last primary admin
+        if ($business->users()->wherePivot('role','primary_admin')->where('users.id', $user->id)->exists()) {
+            $primaryAdminCount = $business->users()->wherePivot('role','primary_admin')->count();
+            if ($primaryAdminCount <= 1) {
+                return back()->withErrors(['member' => 'Cannot remove the last primary admin.']);
             }
         }
         $business->users()->detach($user->id);
@@ -69,11 +69,11 @@ class TeamController extends Controller
         $business = $request->attributes->get('activeBusiness');
         $user = $request->user();
 
-        // Prevent the last owner from leaving
-        if ($business->users()->wherePivot('role', 'owner')->where('users.id', $user->id)->exists()) {
-            $ownerCount = $business->users()->wherePivot('role', 'owner')->count();
-            if ($ownerCount <= 1) {
-                return back()->withErrors(['member' => 'You are the only owner and cannot leave the business.']);
+        // Prevent the last primary admin from leaving
+        if ($business->users()->wherePivot('role', 'primary_admin')->where('users.id', $user->id)->exists()) {
+            $primaryAdminCount = $business->users()->wherePivot('role', 'primary_admin')->count();
+            if ($primaryAdminCount <= 1) {
+                return back()->withErrors(['member' => 'You are the only primary admin and cannot leave the business.']);
             }
         }
 

@@ -172,7 +172,7 @@
                                 @php
                                     $userRole = Auth::user()->businesses()->where('business_id', $activeBusiness->id)->value('role');
                                 @endphp
-                                @if(in_array($userRole, ['owner', 'admin']))
+                                @if(in_array($userRole, ['primary_admin', 'admin']))
                                     <a href="{{ route('books.create') }}" class="btn btn-primary btn-sm">
                                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -185,7 +185,7 @@
                                     $user = Auth::user();
                                     $role = $user->businesses()->where('business_id', $activeBusiness->id)->value('role');
 
-                                    // Staff can only see books they are assigned to
+                                    // Employees can only see books they are assigned to
                                     $assignedBookIds = $user->books()->where('business_id', $activeBusiness->id)->pluck('books.id');
                                     $books = \App\Models\Book::where('business_id', $activeBusiness->id)
                                                 ->whereIn('id', $assignedBookIds)
@@ -195,7 +195,7 @@
                                     $selectedBookId = request()->route('book')?->id ?? request()->get('book');
                                 @endphp
 
-                                @if(!in_array($role, ['viewer']))
+                                @if(!in_array($role, ['employee']))
                                 <a href="{{ route('books.create') }}" class="nav-link" style="border: 1px solid var(--gray-200); border-radius: 6px; padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.5rem;">
                                     Create Book
                                 </a>
@@ -207,7 +207,7 @@
                                     </a>
                                 @empty
                                     <div class="text-center" style="padding: 1.5rem 0;">
-                                        @if(in_array($role, ['owner', 'admin']))
+                                        @if(in_array($role, ['primary_admin', 'admin']))
                                             <p style="color: var(--gray-500); font-size: 0.875rem; margin-bottom: 1rem;">No books yet</p>
                                             <a href="{{ route('books.create') }}" class="btn btn-primary btn-sm">Create Book</a>
                                         @else
