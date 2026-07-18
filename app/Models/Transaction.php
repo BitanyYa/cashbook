@@ -21,6 +21,7 @@ class Transaction extends Model
         'status',
         'approved_by',
         'description',
+        'contact_name',
         'transaction_date',
         'image_path',
     ];

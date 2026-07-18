@@ -341,11 +341,26 @@ class BookController extends Controller
         // Employees cannot edit/delete anything
 
         if ($canEdit) {
-            $buttons .= '<button onclick="editTransaction(' . $transaction->id . ')" style="background: none; border: none; color: var(--primary-color); cursor: pointer; text-decoration: none; margin-right: 0.5rem;">Edit</button>';
-            $buttons .= '<button onclick="deleteTransaction(' . $transaction->id . ')" style="background: none; border: none; color: var(--danger-color); cursor: pointer; text-decoration: none;">Delete</button>';
+            $buttons .= '
+                <button onclick="event.stopPropagation(); editTransaction(' . $transaction->id . ')"
+                    title="Edit entry"
+                    style="width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border:none;background:transparent;color:#6366f1;cursor:pointer;border-radius:5px;transition:background .12s;"
+                    onmouseover="this.style.background=\'#eef2ff\'" onmouseout="this.style.background=\'transparent\'">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                    </svg>
+                </button>
+                <button onclick="event.stopPropagation(); deleteTransaction(' . $transaction->id . ')"
+                    title="Delete entry"
+                    style="width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border:none;background:transparent;color:#ef4444;cursor:pointer;border-radius:5px;transition:background .12s;"
+                    onmouseover="this.style.background=\'#fee2e2\'" onmouseout="this.style.background=\'transparent\'">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                </button>';
         }
 
-        return '<div style="display: flex; justify-content: flex-end; gap: 0.5rem;">' . $buttons . '</div>';
+        return '<div class="txn-actions" style="display:inline-flex;align-items:center;gap:2px;opacity:0;transition:opacity .15s;">' . $buttons . '</div>';
     }
 
     // Book User Management Methods

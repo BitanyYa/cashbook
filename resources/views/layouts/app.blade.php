@@ -161,143 +161,88 @@
         <div class="app-main">
             <!-- Sidebar -->
             @if($activeBusiness ?? null)
-                <aside
-                    class="app-sidebar"
-                    :class="{ 'open': sidebarOpen }"
-                    @click.away="sidebarOpen = false">
-                    <div class="sidebar-section">
-                        @if (Route::is('books.*') || Route::is('transactions.*') || Route::is('reports.*'))
-                            <div class="flex items-center justify-between mb-4">
-                                <h2 class="sidebar-title">Books</h2>
-                                @php
-                                    $userRole = Auth::user()->businesses()->where('business_id', $activeBusiness->id)->value('role');
-                                @endphp
-                                @if(in_array($userRole, ['primary_admin', 'admin']))
-                                    <a href="{{ route('books.create') }}" class="btn btn-primary btn-sm">
-                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                                        </svg>
-                                    </a>
-                                @endif
-                            </div>
-                            <nav class="sidebar-nav">
-                                @php
-                                    $user = Auth::user();
-                                    $role = $user->businesses()->where('business_id', $activeBusiness->id)->value('role');
+            @php
+                $sidebarUserRole = Auth::user()->businesses()
+                    ->where('business_id', $activeBusiness->id)
+                    ->value('role');
+            @endphp
+            <aside
+                class="app-sidebar"
+                :class="{ 'open': sidebarOpen }"
+                @click.away="sidebarOpen = false">
 
-                                    // Employees can only see books they are assigned to
-                                    $assignedBookIds = $user->books()->where('business_id', $activeBusiness->id)->pluck('books.id');
-                                    $books = \App\Models\Book::where('business_id', $activeBusiness->id)
-                                                ->whereIn('id', $assignedBookIds)
-                                                ->latest('updated_at')
-                                                ->get();
-
-                                    $selectedBookId = request()->route('book')?->id ?? request()->get('book');
-                                @endphp
-
-                                @if(!in_array($role, ['employee']))
-                                <a href="{{ route('books.create') }}" class="nav-link" style="border: 1px solid var(--gray-200); border-radius: 6px; padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                                    Create Book
-                                </a>
-                                @endif
-
-                                @forelse($books as $book)
-                                    <a href="{{ route('books.show', $book) }}" class="nav-link {{ $selectedBookId == $book->id ? 'active' : '' }}" style="border: 1px solid var(--gray-200); border-radius: 6px; padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                                        <span>{{ $book->name }}</span>
-                                    </a>
-                                @empty
-                                    <div class="text-center" style="padding: 1.5rem 0;">
-                                        @if(in_array($role, ['primary_admin', 'admin']))
-                                            <p style="color: var(--gray-500); font-size: 0.875rem; margin-bottom: 1rem;">No books yet</p>
-                                            <a href="{{ route('books.create') }}" class="btn btn-primary btn-sm">Create Book</a>
-                                        @else
-                                            <p style="color: var(--gray-500); font-size: 0.875rem;">No books assigned to you</p>
-                                        @endif
-                                    </div>
-                                @endforelse
-                            </nav>
-                        @else
-                        <h2 class="sidebar-title">Dashboard</h2>
-                            {{-- show user name and image and show profile link --}}
-                            <nav class="sidebar-nav">
-                                <div class="flex items-center" style="border: 1px solid var(--gray-200); border-radius: 6px; padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                    <div class="avatar" style="width: 32px; height: 32px; background: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 8px;">
-                                        <span style="color: white; font-weight: 500; font-size: 0.875rem;">{{ strtoupper(substr(Auth::user()->name, 0, 1)) }}</span>
-                                    </div>
-                                    <span>{{ Auth::user()->name }}</span>
-                                </div>
-
-                                <a href="{{ route('dashboard') }}" class="nav-link {{ Route::is('dashboard') ? 'active' : '' }}"  style="border: 1px solid var(--gray-200); border-radius: 6px; padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                                    <!-- Home / Dashboard Icon -->
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l9-9 9 9v9a3 3 0 01-3 3h-3a3 3 0 01-3-3v-6H6a3 3 0 00-3 3v3z"/>
-                                    </svg>
-                                    <span>Dashboard</span>
-                                </a>
-
-                                <a href="{{ route('businesses.index') }}" class="nav-link {{ Route::is('businesses.*') ? 'active' : '' }}" style="border: 1px solid var(--gray-200); border-radius: 6px; padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                                    <!-- Briefcase / Businesses Icon -->
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-                                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></rect>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7V5a4 4 0 00-8 0v2"></path>
-                                    </svg>
-                                    <span>Businesses</span>
-                                </a>
-                            
-                            
-                                <a href="{{ route('books.index') }}" class="nav-link {{ Route::is('books.*') || Route::is('transactions.*') || Route::is('reports.*') ? 'active' : '' }}" style="border: 1px solid var(--gray-200); border-radius: 6px; padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                                <!-- Book Icon -->
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                                </svg>
-                                <span>Books</span>
-                            </a>
-
-                                
-
-                                {{-- Notifications --}}
-                                <livewire:sidebar.sidebar-notifications />
-                                {{-- Notifications End --}}
-
-                                {{-- Profile and Settings --}}
-                                <a href="{{ route('profile.edit') }}" class="nav-link {{ Route::is('profile.edit') ? 'active' : '' }}" style="border: 1px solid var(--gray-200); border-radius: 6px; padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                                    <!-- User / Profile Icon -->
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-                                        <circle cx="12" cy="7" r="4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></circle>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.5 21a6.5 6.5 0 0113 0"></path>
-                                    </svg>
-                                    <span>Profile</span>
-                                </a>
-
-                                <a href="{{ route('settings.index', $activeBusiness) }}" class="nav-link {{ Route::is('settings.*') ? 'active' : '' }}" style="border: 1px solid var(--gray-200); border-radius: 6px; padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                                    <!-- Users / Team Icon -->
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 21v-2a4 4 0 00-8 0v2m8-10a4 4 0 11-8 0 4 4 0 018 0zM12 7a4 4 0 100-8 4 4 0 000 8z"></path>
-                                    </svg>
-                                    <span>Settings</span>
-                                </a>
-
-                                {{-- sign out --}}
-                                <form method="POST" action="{{ route('logout') }}" class="mt-4">
-                                    @csrf
-                                    <button
-                                        type="submit"
-                                        class="nav-link"
-                                        style="border: 1px solid var(--gray-200); border-radius: 6px; padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--danger-color); cursor: pointer;"
-                                        onclick="return confirm('Are you sure you want to sign out?')"
-                                    >
-                                        <!-- Sign Out Icon -->
-                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6-8V3a2 2 0 00-2-2H5a2 2 0 00-2 2v18a2 2 0 002 2h10a2 2 0 002-2v-3"></path>
-                                        </svg>
-                                        <span>Sign Out</span>
-                                    </button>
-                                </form>
-
-                            </nav>
-                        @endif
+                {{-- ══════════════════════════════════
+                     SECTION 1 — Book Keeping
+                ══════════════════════════════════ --}}
+                <div class="cb-sidebar-section">
+                    <div class="cb-sidebar-label">
+                        <span>Book Keeping</span>
                     </div>
-                </aside>
+
+                    {{-- Cashbooks top-level link --}}
+                    <a href="{{ route('books.index') }}"
+                       class="cb-nav-link {{ request()->routeIs('books.*') || request()->routeIs('transactions.*') || request()->routeIs('reports.*') ? 'active' : '' }}">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13
+                                   C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13
+                                   C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13
+                                   C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                        <span>Cashbooks</span>
+                    </a>
+                </div>
+
+                {{-- ══════════════════════════════════
+                     SECTION 2 — Settings
+                     Only shown to primary_admin / admin
+                ══════════════════════════════════ --}}
+                @if(in_array($sidebarUserRole, ['primary_admin', 'admin']))
+                <div class="cb-sidebar-section">
+                    <div class="cb-sidebar-label">
+                        <span>Settings</span>
+                    </div>
+
+                    {{-- Team → TeamController@index (settings.index) --}}
+                    <a href="{{ route('settings.index', $activeBusiness) }}"
+                       class="cb-nav-link {{ request()->routeIs('settings.*') ? 'active' : '' }}">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2
+                                   c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857
+                                   M7 20v-2c0-.656.126-1.283.356-1.857
+                                   m0 0a5.002 5.002 0 019.288 0"/>
+                        </svg>
+                        <span>Team</span>
+                    </a>
+
+                    {{-- Business → BusinessController@index (businesses.index) --}}
+                    <a href="{{ route('businesses.index') }}"
+                       class="cb-nav-link {{ request()->routeIs('businesses.*') ? 'active' : '' }}">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"
+                                stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M16 7V5a4 4 0 00-8 0v2"/>
+                        </svg>
+                        <span>Business Settings</span>
+                    </a>
+                </div>
+                @endif
+
+                {{-- ══════════════════════════════════
+                     SECTION 3 — Others
+                ══════════════════════════════════ --}}
+                <div class="cb-sidebar-section">
+                    <div class="cb-sidebar-label">
+                        <span>Others</span>
+                    </div>
+
+                    {{-- Notifications — Livewire polls every 10s for unread count --}}
+                    <livewire:sidebar.sidebar-notifications />
+                </div>
+
+            </aside>
             @endif
 
             <!-- Main content -->
@@ -333,6 +278,7 @@
             </div>
         </footer>
 
+        @stack('scripts')
         @livewireScripts
     </body>
 </html>

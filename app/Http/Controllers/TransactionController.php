@@ -90,6 +90,7 @@ class TransactionController extends Controller
             'type' => 'required|in:income,expense',
             'transaction_date' => 'required|date',
             'description' => 'nullable|string',
+            'contact_name' => 'nullable|string|max:255',
             'receipt' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:4096',
         ]);
 
@@ -147,6 +148,7 @@ class TransactionController extends Controller
             'mode' => $data['mode'] ?? null,
             'transaction_date' => $data['transaction_date'],
             'description' => $data['description'] ?? null,
+            'contact_name' => $data['contact_name'] ?? null,
             'status' => $status,
         ]);
 
@@ -255,6 +257,7 @@ class TransactionController extends Controller
                     'transaction_date' => $transaction->transaction_date->format('Y-m-d\TH:i'),
                     'category_id' => $transaction->category_id,
                     'description' => $transaction->description,
+                    'contact_name' => $transaction->contact_name,
                     'image_path' => $transaction->image_path
                 ]
             ]);
@@ -302,6 +305,7 @@ class TransactionController extends Controller
             'mode' => 'nullable|string|max:50',
             'transaction_date' => 'required|date',
             'description' => 'nullable|string',
+            'contact_name' => 'nullable|string|max:255',
             'receipt' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:4096',
         ]);
 
@@ -482,6 +486,24 @@ class TransactionController extends Controller
             'success' => true,
             'message' => 'Selected transactions have been deleted successfully.'
         ]);
+    }
+
+    public function contacts(Request $request)
+    {
+        $business = $request->attributes->get('activeBusiness');
+        $q = trim($request->get('q', ''));
+
+        $contacts = Transaction::where('business_id', $business->id)
+            ->whereNotNull('contact_name')
+            ->where('contact_name', '!=', '')
+            ->when($q, fn($query) => $query->where('contact_name', 'like', "%{$q}%"))
+            ->distinct()
+            ->orderBy('contact_name')
+            ->pluck('contact_name')
+            ->take(20)
+            ->values();
+
+        return response()->json(['contacts' => $contacts]);
     }
 
     public function approve(Request $request, Transaction $transaction)

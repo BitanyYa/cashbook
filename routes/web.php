@@ -40,6 +40,7 @@ Route::middleware('auth')->group(function () {
         });
 
         Route::resource('categories', \App\Http\Controllers\CategoryController::class)->except(['show']);
+        Route::get('transactions/contacts', [\App\Http\Controllers\TransactionController::class, 'contacts'])->name('transactions.contacts');
         Route::get('transactions/create', [\App\Http\Controllers\TransactionController::class, 'create'])->name('transactions.create');
         Route::post('transactions', [\App\Http\Controllers\TransactionController::class, 'store'])->name('transactions.store');
         Route::get('transactions/{transaction}/edit', [\App\Http\Controllers\TransactionController::class, 'edit'])->name('transactions.edit');
