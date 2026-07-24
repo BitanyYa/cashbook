@@ -49,16 +49,8 @@
                     <label for="currency" style="display: block; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Default Currency</label>
                     <select id="currency" name="currency"
                             style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 1rem; color: #111827;">
-                        <option value="BDT" {{ old('currency', $business->currency) == 'BDT' ? 'selected' : '' }}>BDT - Bangladeshi Taka</option>
+                        <option value="ETB" {{ old('currency', $business->currency) == 'ETB' ? 'selected' : '' }}>ETB - Ethiopian Birr</option>
                         <option value="USD" {{ old('currency', $business->currency) == 'USD' ? 'selected' : '' }}>USD - US Dollar</option>
-                        <option value="EUR" {{ old('currency', $business->currency) == 'EUR' ? 'selected' : '' }}>EUR - Euro</option>
-                        <option value="GBP" {{ old('currency', $business->currency) == 'GBP' ? 'selected' : '' }}>GBP - British Pound</option>
-                        <option value="JPY" {{ old('currency', $business->currency) == 'JPY' ? 'selected' : '' }}>JPY - Japanese Yen</option>
-                        <option value="CAD" {{ old('currency', $business->currency) == 'CAD' ? 'selected' : '' }}>CAD - Canadian Dollar</option>
-                        <option value="AUD" {{ old('currency', $business->currency) == 'AUD' ? 'selected' : '' }}>AUD - Australian Dollar</option>
-                        <option value="CHF" {{ old('currency', $business->currency) == 'CHF' ? 'selected' : '' }}>CHF - Swiss Franc</option>
-                        <option value="CNY" {{ old('currency', $business->currency) == 'CNY' ? 'selected' : '' }}>CNY - Chinese Yuan</option>
-                        <option value="INR" {{ old('currency', $business->currency) == 'INR' ? 'selected' : '' }}>INR - Indian Rupee</option>
                     </select>
                     @error('currency')
                         <p style="color: #dc2626; font-size: 0.875rem; margin-top: 0.25rem;">{{ $message }}</p>
