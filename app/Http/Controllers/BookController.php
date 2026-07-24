@@ -124,8 +124,9 @@ class BookController extends Controller
         $categories = Category::where('business_id', $business->id)->get();
 
         $modes = $book->transactions()->distinct()->pluck('mode')->filter()->values();
+        $contacts = $book->transactions()->whereNotNull('contact_name')->where('contact_name', '!=', '')->distinct()->pluck('contact_name')->values();
 
-        return view('books.show', compact('book','transactions','categories','bookRole','modes'));
+        return view('books.show', compact('book','transactions','categories','bookRole','modes','contacts'));
     }
 
     public function transactionsData(Request $request, Book $book)
@@ -156,6 +157,10 @@ class BookController extends Controller
 
         if ($request->filled('mode')) {
             $query->where('mode', $request->mode);
+        }
+
+        if ($request->filled('contact')) {
+            $query->where('contact_name', $request->contact);
         }
 
         if ($request->filled('search')) {
@@ -199,23 +204,80 @@ class BookController extends Controller
 
         $transactions = $query->skip($start)->take($length)->get();
 
-        $data = $transactions->map(function ($transaction) use ($business, $book, $request) {
+        // Calculate running balance for all transactions in chronological order
+        $allBookTransactions = $book->transactions()
+            ->orderBy('transaction_date', 'asc')
+            ->orderBy('created_at', 'asc')
+            ->orderBy('id', 'asc')
+            ->get(['id', 'type', 'amount']);
+
+        $runningBalance = 0;
+        $runningBalances = [];
+        foreach ($allBookTransactions as $t) {
+            if ($t->type === 'income') {
+                $runningBalance += $t->amount;
+            } else {
+                $runningBalance -= $t->amount;
+            }
+            $runningBalances[$t->id] = $runningBalance;
+        }
+
+        $data = $transactions->map(function ($transaction) use ($business, $book, $request, $runningBalances) {
+            // Build the Date HTML
+            $dateObj = $transaction->transaction_date;
+            $dateStr = $dateObj->isToday() ? 'Today' : ($dateObj->isYesterday() ? 'Yesterday' : $dateObj->format('d M, Y'));
+            $timeStr = $dateObj->format('h:i A');
+            $dateHtml = '<div style="font-weight: 700; color: var(--gray-800);">' . $dateStr . '</div>'
+                      . '<div style="font-size: 0.75rem; color: var(--gray-400); margin-top: 1px;">' . $timeStr . '</div>';
+
+            // Build the Details cell HTML
+            $detailsHtml = '';
+            if ($transaction->contact_name) {
+                $contactType = $transaction->type === 'income' ? 'Customer' : 'Supplier';
+                $detailsHtml .= '<div style="font-weight:600;color:var(--gray-900);margin-bottom:2px;">'
+                    . '<span style="font-weight:700;">(' . e($transaction->contact_name) . ')</span>'
+                    . ' <span style="color:var(--gray-400);font-weight:400;font-size:0.8125rem;">(' . $contactType . ')</span>'
+                    . '</div>';
+            }
+            $detailsHtml .= '<div style="font-weight: 700; color:' . ($transaction->contact_name ? 'var(--gray-700)' : 'var(--gray-900)') . ';font-size:0.85rem;">'
+                . e($transaction->description ?: '—')
+                . '</div>';
+            if ($transaction->user) {
+                $detailsHtml .= '<div style="font-size:0.7rem;color:var(--gray-400);margin-top:2px;">by ' . e($transaction->user->name) . '</div>';
+            }
+
+            // Build the Bill/Attachment HTML
+            $billHtml = '—';
+            if ($transaction->image_path) {
+                $billHtml = '<div style="display:flex;flex-direction:column;align-items:flex-start;gap:1px;">'
+                    . '<div style="display:flex;align-items:center;gap:4px;font-size:0.8125rem;color:var(--gray-800);font-weight:600;">'
+                    . '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" style="color:var(--gray-500);">'
+                    . '<path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636L12 12m4.727-4.727a6 6 0 11-8.485 8.485L12 12m1.818-1.818a3 3 0 11-4.243 4.243L12 12" />'
+                    . '</svg>'
+                    . '1</div>'
+                    . '<div style="font-size:0.7rem;color:var(--gray-400);">Attachment</div>'
+                    . '</div>';
+            }
+
+            $balVal = $runningBalances[$transaction->id] ?? 0;
+            $balFormatted = number_format($balVal, $balVal == round($balVal) ? 0 : 2);
+            $balanceHtml = '<span style="font-weight: 700; color: var(--gray-800);">' . $balFormatted . '</span>';
+
+            $amtVal = $transaction->amount;
+            $amtFormatted = number_format($amtVal, $amtVal == round($amtVal) ? 0 : 2);
+            $amountHtml = '<span style="font-weight: 700; color: ' .
+                          ($transaction->type === 'income' ? 'var(--success-color)' : 'var(--danger-color)') . ';">' .
+                          $amtFormatted . '</span>';
+
             return [
                 'id' => $transaction->id,
-                'transaction_date' => $transaction->transaction_date->format('M j, Y h:i A'),
-                'description' => $transaction->description ?: '—',
+                'transaction_date' => $dateHtml,
+                'details' => $detailsHtml,
                 'category' => $transaction->category?->name ?: '—',
-                'mode' => $transaction->mode ? ucfirst($transaction->mode) : '—',
-                'type' => '<span class="badge ' . ($transaction->type === 'income' ? 'badge-success' : 'badge-danger') . '">' .
-                         ucfirst($transaction->type) . '</span>',
-                'amount' => '<span style="font-weight: 600; color: ' .
-                           ($transaction->type === 'income' ? 'var(--success-color)' : 'var(--danger-color)') . ';">' .
-                           $book->currency . ' ' . number_format($transaction->amount, 2) . '</span>',
-                'status' => '<span class="badge ' .
-                           ($transaction->status === 'approved' ? 'badge-success' :
-                           ($transaction->status === 'pending' ? 'badge-warning' : 'badge-danger')) . '">' .
-                           ucfirst($transaction->status) . '</span>',
-                'user' => $transaction->user?->name ?: '—',
+                'mode' => $transaction->mode ? strtoupper($transaction->mode) : '—',
+                'bill' => $billHtml,
+                'amount' => $amountHtml,
+                'balance' => $balanceHtml,
                 'actions' => $this->generateActionButtons($transaction, $request)
             ];
         });
@@ -325,7 +387,7 @@ class BookController extends Controller
 
         // Receipt link - available to all users who can view the transaction
         if ($transaction->image_path) {
-            $buttons .= '<a href="/transactions/' . $transaction->id . '/receipt" style="color: var(--primary-color); text-decoration: none; margin-right: 0.5rem;">Receipt</a>';
+            $buttons .= '<a href="/transactions/' . $transaction->id . '/receipt" target="_blank" onclick="event.stopPropagation();" style="color: var(--primary-color); text-decoration: none; margin-right: 0.5rem;">Receipt</a>';
         }
 
         // Edit/Delete buttons - only for primary_admins, or admins for their own transactions

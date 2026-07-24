@@ -44,20 +44,8 @@
                 <div class="mt-4">
                     <x-input-label for="currency" :value="__('Default Currency')" />
                     <select id="currency" name="currency" class="form-select" required>
-                        <option value="">Select a currency</option>
-                        <option value="BDT" {{ old('currency', 'BDT') == 'BDT' ? 'selected' : '' }}>BDT - Bangladeshi Taka</option>
+                        <option value="ETB" {{ old('currency', 'ETB') == 'ETB' ? 'selected' : '' }}>ETB - Ethiopian Birr</option>
                         <option value="USD" {{ old('currency') == 'USD' ? 'selected' : '' }}>USD - US Dollar</option>
-                        <option value="EUR" {{ old('currency') == 'EUR' ? 'selected' : '' }}>EUR - Euro</option>
-                        <option value="GBP" {{ old('currency') == 'GBP' ? 'selected' : '' }}>GBP - British Pound</option>
-                        <option value="JPY" {{ old('currency') == 'JPY' ? 'selected' : '' }}>JPY - Japanese Yen</option>
-                        <option value="CAD" {{ old('currency') == 'CAD' ? 'selected' : '' }}>CAD - Canadian Dollar</option>
-                        <option value="AUD" {{ old('currency') == 'AUD' ? 'selected' : '' }}>AUD - Australian Dollar</option>
-                        <option value="CHF" {{ old('currency') == 'CHF' ? 'selected' : '' }}>CHF - Swiss Franc</option>
-                        <option value="CNY" {{ old('currency') == 'CNY' ? 'selected' : '' }}>CNY - Chinese Yuan</option>
-                        <option value="INR" {{ old('currency') == 'INR' ? 'selected' : '' }}>INR - Indian Rupee</option>
-                        <option value="BRL" {{ old('currency') == 'BRL' ? 'selected' : '' }}>BRL - Brazilian Real</option>
-                        <option value="MXN" {{ old('currency') == 'MXN' ? 'selected' : '' }}>MXN - Mexican Peso</option>
-                        <option value="ZAR" {{ old('currency') == 'ZAR' ? 'selected' : '' }}>ZAR - South African Rand</option>
                     </select>
                     <x-input-error class="mt-2" :messages="$errors->get('currency')" />
                     <p style="font-size: 0.875rem; color: var(--gray-500); margin-top: 0.5rem;">This will be used as the default currency for all transactions in this book.</p>

@@ -46,12 +46,8 @@
                         required
                         style="width: 100%; margin-top: 0.25rem; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; background-color: white; font-size: 1rem; color: #1a202c; outline: none; transition: border-color 0.2s, box-shadow 0.2s;"
                     >
-                        <option value="">Select a currency</option>
-                        @foreach(['BDT', 'USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'BRL', 'MXN', 'ZAR'] as $currency)
-                            <option value="{{ $currency }}" {{ old('currency', $book->currency) == $currency ? 'selected' : '' }}>
-                                {{ $currency }} - {{ config("currencies.$currency") ?? $currency }}
-                            </option>
-                        @endforeach
+                        <option value="ETB" {{ old('currency', $book->currency) == 'ETB' ? 'selected' : '' }}>ETB - Ethiopian Birr</option>
+                        <option value="USD" {{ old('currency', $book->currency) == 'USD' ? 'selected' : '' }}>USD - US Dollar</option>
                     </select>
                     <x-input-error :messages="$errors->get('currency')" style="margin-top: 0.5rem; display: block;" />
                     <p style="margin-top: 0.5rem; font-size: 0.875rem; color: #6b7280;">This will be used as the default currency for all transactions in this book.</p>
