@@ -21,11 +21,11 @@
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Book</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mode</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -34,24 +34,43 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                     @forelse($transactions as $transaction)
                         <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {{ $transaction->transaction_date->format('M j, Y') }}
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                <div class="font-semibold text-gray-900">
+                                    {{ $transaction->transaction_date->isToday() ? 'Today' : $transaction->transaction_date->format('M j, Y') }}
+                                </div>
+                                <div class="text-gray-400 text-xs mt-0.5">
+                                    {{ $transaction->transaction_date->format('h:i A') }}
+                                </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 <a href="{{ route('books.show', $transaction->book) }}" class="text-indigo-600 hover:text-indigo-900">
                                     {{ $transaction->book->name }}
                                 </a>
                             </td>
-                            <td class="px-6 py-4 text-sm text-gray-900">
-                                {{ $transaction->description ?: 'No description' }}
+                            <td class="px-6 py-4 text-sm">
+                                {{-- Contact name (posted for) with type label --}}
+                                @if($transaction->contact_name)
+                                    <div class="font-semibold text-gray-900">
+                                        <span class="font-bold">({{ $transaction->contact_name }})</span>
+                                        <span class="text-gray-500 font-normal">({{ ucfirst($transaction->type) }})</span>
+                                    </div>
+                                @endif
+                                {{-- Description / Remarks --}}
+                                <div class="{{ $transaction->contact_name ? 'text-gray-700 mt-0.5' : 'font-semibold text-gray-900' }}">
+                                    {{ $transaction->description ?: '—' }}
+                                </div>
+                                {{-- Posted by --}}
+                                @if($transaction->user)
+                                    <div class="text-gray-400 text-xs mt-0.5">
+                                        by {{ $transaction->user->name }}
+                                    </div>
+                                @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {{ $transaction->category?->name ?: '—' }}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {{ $transaction->type === 'income' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                    {{ ucfirst($transaction->type) }}
-                                </span>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {{ $transaction->mode ? ucfirst($transaction->mode) : '—' }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium {{ $transaction->type === 'income' ? 'text-green-600' : 'text-red-600' }}">
                                 {{ $activeBusiness->currency }} {{ number_format($transaction->amount, 2) }}
