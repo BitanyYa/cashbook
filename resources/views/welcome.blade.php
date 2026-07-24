@@ -18,7 +18,7 @@
             </h1>
             <nav style="display:flex; gap:16px; align-items:center;">
                 @auth
-                    <a href="{{ route('dashboard') }}" style="color:#374151; text-decoration:none;">Dashboard</a>
+                    <a href="{{ route('books.index') }}" style="color:#374151; text-decoration:none;">Cashbooks</a>
                 @else
                     <a href="{{ route('login') }}" style="color:#374151; text-decoration:none;">Login</a>
                     <a href="{{ route('register') }}" style="padding:8px 16px; background:#16a34a; color:white; border-radius:8px; text-decoration:none;">Get Started</a>

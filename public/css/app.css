@@ -335,6 +335,11 @@ body {
     font-family: inherit;
 }
 
+.form-input::placeholder {
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
 .form-input:focus {
     outline: none;
     border-color: var(--primary-color);
@@ -544,15 +549,15 @@ body {
 }
 
 .page-title {
-    font-size: 2rem;
+    font-size: 1.375rem;
     font-weight: 700;
-    color: var(--gray-900);
-    margin-bottom: 0.5rem;
+    color: var(--gray-800);
+    margin-bottom: 0.25rem;
 }
 
 .page-subtitle {
-    color: var(--gray-600);
-    font-size: 1rem;
+    color: var(--gray-500);
+    font-size: 0.8125rem;
 }
 
 /* Alert Styles */
@@ -928,6 +933,7 @@ body {
 
 .w-full { width: 100%; }
 .h-full { height: 100%; }
+
 
 .hidden { display: none; }
 .block { display: block; }
@@ -1773,16 +1779,16 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.6rem 1rem 0.25rem;
-    font-size: 0.6875rem;
+    padding: 0.75rem 1rem 0.25rem;
+    font-size: 0.8125rem;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--gray-500);
+    text-transform: none;
+    letter-spacing: normal;
+    color: var(--gray-800);
     user-select: none;
 }
 .cb-sidebar-label svg {
-    color: var(--gray-400);
+    color: var(--gray-500);
     flex-shrink: 0;
 }
 
@@ -1791,17 +1797,18 @@ body {
     display: flex;
     align-items: center;
     gap: 0.625rem;
-    padding: 0.45rem 1rem;
+    padding: 0.5rem 0.85rem;
     font-size: 0.875rem;
     font-weight: 500;
-    color: var(--gray-700);
+    color: var(--gray-600);
     text-decoration: none;
-    border-radius: 0;
+    border-radius: 6px;
+    margin: 0.15rem 0.75rem;
     transition: background 0.12s, color 0.12s;
     cursor: pointer;
     border: none;
     background: transparent;
-    width: 100%;
+    width: calc(100% - 1.5rem);
     text-align: left;
     position: relative;
 }
@@ -1819,12 +1826,12 @@ body {
     color: var(--gray-700);
 }
 .cb-nav-link.active {
-    background: #eff6ff;          /* blue-50 equivalent */
-    color: var(--primary-color);
+    background: #3b82f6 !important;
+    color: white !important;
     font-weight: 600;
 }
 .cb-nav-link.active svg {
-    color: var(--primary-color);
+    color: white !important;
 }
 
 /* Unread badge pill on the notifications link */

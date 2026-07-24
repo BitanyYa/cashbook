@@ -214,7 +214,7 @@
                     <span style="font-size:.8125rem;">Manage Team</span>
                 </a>
                 @else
-                <a href="{{ route('dashboard') }}"
+                <a href="{{ route('books.index') }}"
                    class="btn btn-secondary"
                    style="flex-direction:column;gap:.3rem;padding:1rem;height:auto;justify-content:center;">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">

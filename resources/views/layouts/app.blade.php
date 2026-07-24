@@ -63,9 +63,9 @@
             <div class="header-content">
                 <!-- Left: Logo -->
                 <div class="flex items-center">
-                    <a href="{{ route('dashboard') }}" class="app-logo-link">
-                        <img src="{{ Storage::url('images/logo.svg') }}" alt="CashBook Logo" class="app-logo-icon">
-                        <span class="app-logo-text">CashBook</span>
+                    <a href="{{ route('books.index') }}" class="app-logo-link" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+                        <div style="background: #3b82f6; border-radius: 6px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: 1.125rem; font-family: sans-serif;">C</div>
+                        <span style="font-weight: 800; font-size: 1.125rem; color: #1e3a8a; letter-spacing: 0.05em; font-family: sans-serif;">CASHBOOK</span>
                     </a>
                 </div>
 
@@ -73,10 +73,12 @@
                 <div class="flex items-center">
                     @if($activeBusiness ?? null)
                         <div class="dropdown" x-data="{ open: false }">
-                            <button @click="open = !open" class="btn btn-secondary" style="display: flex; align-items: center;">
-                                <div style="width: 8px; height: 8px; background: var(--success-color); border-radius: 50%; margin-right: 8px;"></div>
+                            <button @click="open = !open" class="btn btn-secondary" style="display: flex; align-items: center; padding: 0.5rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; font-size: 0.875rem; color: #334155; font-weight: 500; gap: 8px; cursor: pointer;">
+                                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" style="color: #64748b;">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21h10.5V3.75c0-.621-.504-1.125-1.125-1.125H7.875c-.621 0-1.125.504-1.125 1.125V21z" />
+                                </svg>
                                 <span>{{ $activeBusiness->name }}</span>
-                                <svg style="width: 16px; height: 16px; margin-left: 8px;" fill="currentColor" viewBox="0 0 20 20">
+                                <svg style="width: 14px; height: 14px; color: #64748b;" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                                 </svg>
                             </button>
@@ -85,11 +87,11 @@
                                 @foreach(Auth::user()->businesses as $business)
                                     <form method="POST" action="{{ route('business.switch', $business) }}">
                                         @csrf
-                                        <button type="submit" class="dropdown-item {{ $business->id === $activeBusiness->id ? 'bg-gray-50' : '' }}" style="width: 100%; text-align: left; padding: 0.5rem 1rem;">
+                                        <button type="submit" class="dropdown-item {{ $business->id === $activeBusiness->id ? 'bg-gray-50' : '' }}" style="width: 100%; text-align: left; padding: 0.5rem 1rem; border: none; background: transparent; cursor: pointer; font-family: inherit;">
                                             <div style="display: flex; align-items: center;">
                                                 <div style="width: 8px; height: 8px; background: {{ $business->id === $activeBusiness->id ? 'var(--primary-color)' : 'var(--gray-400)' }}; border-radius: 50%; margin-right: 12px;"></div>
                                                 <div>
-                                                    <div>{{ $business->name }}</div>
+                                                    <div style="font-weight: 600;">{{ $business->name }}</div>
                                                     <div style="font-size: 0.75rem; color: var(--gray-500);">{{ $business->currency }}</div>
                                                 </div>
                                             </div>
@@ -104,7 +106,7 @@
                                     👁 View Businesses
                                 </a>
 
-                                                                <!-- Create New Business Button -->
+                                <!-- Create New Business Button -->
                                 <a href="{{ route('businesses.create') }}" class="dropdown-item" style="display: block; padding: 0.5rem 1rem; color: var(--primary-color);">
                                     ➕ New Business
                                 </a>
@@ -116,16 +118,24 @@
                 </div>
 
                 <!-- Right: User Menu -->
-                <div class="flex items-center">
+                <div class="flex items-center" style="gap: 14px;">
+                    {{-- Keyboard Shortcut Icon --}}
+                    <button type="button" title="Keyboard Shortcuts" style="background: none; border: none; cursor: pointer; color: #64748b; display: flex; align-items: center; justify-content: center; padding: 4px;">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <rect x="3" y="4" width="18" height="16" rx="2" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M7 8h.01M11 8h.01M15 8h.01M7 12h.01M11 12h.01M15 12h.01M17 12h.01M7 16h10" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </button>
+
                     <div class="dropdown" x-data="{ open: false }" style="position: relative;">
-                        <button @click="open = !open" class="flex items-center" style="background: transparent; border: none; padding: 0; cursor: pointer;">
-                            <div style="width: 32px; height: 32px; background: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 8px;">
-                                <span style="color: white; font-weight: 500; font-size: 0.875rem;">{{ strtoupper(substr(Auth::user()->name, 0, 1)) }}</span>
+                        <button @click="open = !open" class="flex items-center" style="background: transparent; border: none; padding: 0; cursor: pointer; gap: 8px;">
+                            <div style="width: 32px; height: 32px; background: #e0e7ff; color: #4338ca; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.875rem;">
+                                <span>{{ strtoupper(substr(Auth::user()->name, 0, 1)) }}</span>
                             </div>
-                            <span style="color: var(--gray-700); font-weight: 500;" class="hidden sm:inline-block">
-                                {{ explode(' ', Auth::user()->name)[count(explode(' ', Auth::user()->name)) - 1] }}
+                            <span style="color: #334155; font-weight: 600; font-size: 0.875rem;" class="hidden sm:inline-block">
+                                {{ Auth::user()->name }}
                             </span>
-                            <svg style="width: 16px; height: 16px; margin-left: 4px; color: var(--gray-400);" fill="currentColor" viewBox="0 0 20 20">
+                            <svg style="width: 14px; height: 14px; color: #64748b;" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                             </svg>
                         </button>
@@ -134,7 +144,6 @@
                                 <div style="font-weight: 500; color: var(--gray-900);">{{ Auth::user()->name }}</div>
                                 <div style="font-size: 0.75rem; color: var(--gray-500);">{{ Auth::user()->email }}</div>
                             </div>
-                            <a href="{{ route('dashboard') }}" class="dropdown-item">Dashboard</a>
                             <a href="{{ route('businesses.index') }}" class="dropdown-item">Businesses</a>
                             <a href="{{ route('notifications.index') }}" class="dropdown-item">Notifications
                                 @if(Auth::user()->unreadNotifications->count() > 0)
@@ -148,7 +157,7 @@
                             <div class="dropdown-divider"></div>
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
-                                <button type="submit" class="dropdown-item" style="color: var(--danger-color);">Sign out</button>
+                                <button type="submit" class="dropdown-item" style="color: var(--danger-color); border: none; background: transparent; width: 100%; text-align: left; font-family: inherit;">Sign out</button>
                             </form>
                         </div>
                     </div>
@@ -177,6 +186,9 @@
                 <div class="cb-sidebar-section">
                     <div class="cb-sidebar-label">
                         <span>Book Keeping</span>
+                        <svg width="10" height="10" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                        </svg>
                     </div>
 
                     {{-- Cashbooks top-level link --}}
@@ -201,6 +213,9 @@
                 <div class="cb-sidebar-section">
                     <div class="cb-sidebar-label">
                         <span>Settings</span>
+                        <svg width="10" height="10" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                        </svg>
                     </div>
 
                     {{-- Team → TeamController@index (settings.index) --}}
@@ -227,6 +242,15 @@
                         </svg>
                         <span>Business Settings</span>
                     </a>
+
+                    {{-- Subscription → dummy link --}}
+                    <a href="#" class="cb-nav-link">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <span>Subscription</span>
+                    </a>
                 </div>
                 @endif
 
@@ -236,10 +260,40 @@
                 <div class="cb-sidebar-section">
                     <div class="cb-sidebar-label">
                         <span>Others</span>
+                        <svg width="10" height="10" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                        </svg>
                     </div>
 
-                    {{-- Notifications — Livewire polls every 10s for unread count --}}
-                    <livewire:sidebar.sidebar-notifications />
+                    {{-- What's New --}}
+                    <a href="#" class="cb-nav-link" style="display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+                        <span style="display: flex; align-items: center; gap: 0.625rem;">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9.663 17h4.673M12 3v1m6.364.364l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                            </svg>
+                            <span>What's New</span>
+                        </span>
+                        <span style="background: #10b981; color: white; font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 4px;">New</span>
+                    </a>
+
+                    {{-- Help Docs --}}
+                    <a href="#" class="cb-nav-link">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span>Help Docs</span>
+                    </a>
+
+                    {{-- Contact Us --}}
+                    <a href="#" class="cb-nav-link">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                        </svg>
+                        <span>Contact Us</span>
+                    </a>
                 </div>
 
             </aside>
