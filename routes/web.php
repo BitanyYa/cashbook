@@ -4,19 +4,22 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\BusinessController;
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\BusinessSwitcherController;
 use App\Http\Controllers\TransactionImportController;
 
 Route::get('/', function () {
-    return view('welcome');
+    return auth()->check()
+        ? redirect()->route('dashboard')
+        : redirect()->route('login');
 });
 
 Route::get('/privacy', function () { return view('privacy'); })->name('privacy');
 
-Route::get('/dashboard', DashboardController::class)->middleware(['auth', 'verified', 'active.business'])->name('dashboard');
+Route::get('/dashboard', function () {
+    return redirect()->route('books.index');
+})->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     // Business selection and core resources
