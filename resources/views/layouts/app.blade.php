@@ -333,23 +333,6 @@
             <!-- Left Section -->
             <div class="footer-left" style="font-size: 0.75rem; color: #6b7280;">
                 &copy; {{ date('Y') }} <strong style="color:#111827;">CashBook</strong>. All rights reserved.
-                <div class="footer-center" style="font-size: 0.7rem; color: #9ca3af; margin-top: 0.25rem;">
-                    - Riaz
-                </div>
-            </div>
-
-            <!-- Right Section -->
-            <div class="footer-right" style="display: flex; align-items: center; gap: 1rem; font-size: 0.75rem; color: #4b5563;">
-                <span style="white-space: nowrap;">Version 1.0.0</span>
-
-                <a href="https://github.com/Riaz-Mahmud/cashbook" target="_blank" rel="noopener noreferrer"
-                    style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.6rem; background-color: #111827; color: white; border-radius: 0.25rem; text-decoration: none; font-size: 0.75rem; transition: background-color 0.2s;">
-
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-                        <path d="M12 0C5.373 0 0 5.373 0 12c0 5.303 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577v-2.234c-3.338.726-4.033-1.61-4.033-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.73.083-.73 1.205.085 1.84 1.238 1.84 1.238 1.07 1.835 2.807 1.305 3.492.997.108-.775.418-1.305.76-1.605-2.665-.303-5.467-1.333-5.467-5.933 0-1.31.468-2.38 1.236-3.22-.124-.303-.536-1.523.117-3.176 0 0 1.008-.322 3.301 1.23a11.5 11.5 0 013.003-.404c1.018.005 2.044.138 3.003.404 2.291-1.552 3.297-1.23 3.297-1.23.655 1.653.243 2.873.12 3.176.77.84 1.235 1.91 1.235 3.22 0 4.61-2.807 5.627-5.48 5.922.43.372.823 1.103.823 2.222v3.293c0 .319.217.694.825.576C20.565 21.796 24 17.298 24 12c0-6.627-5.373-12-12-12z"/>
-                    </svg>
-                    <span style="white-space: nowrap;">GitHub</span>
-                </a>
             </div>
         </footer>
 

@@ -125,8 +125,8 @@
                             </div>
                         </div>
                     @empty
-                        <div style="text-align: center; padding: 4rem 2rem; color: #94a3b8;">
-                            <svg width="48" height="48" fill="none" stroke="#cbd5e1" stroke-width="1.5" viewBox="0 0 24 24" style="margin: 0 auto 1rem;">
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 4rem 2rem; color: #94a3b8;">
+                            <svg width="48" height="48" fill="none" stroke="#cbd5e1" stroke-width="1.5" viewBox="0 0 24 24" style="display: block; margin-bottom: 1rem;">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
                             </svg>
                             <p style="font-size: 0.9375rem; font-weight: 600; color: #475569; margin-bottom: 0.5rem;">No books found</p>
@@ -212,8 +212,8 @@ function renderBooksRows(books) {
 
     if (!books || books.length === 0) {
         container.innerHTML = `
-            <div style="text-align: center; padding: 4rem 2rem; color: #94a3b8;">
-                <svg width="48" height="48" fill="none" stroke="#cbd5e1" stroke-width="1.5" viewBox="0 0 24 24" style="margin: 0 auto 1rem;">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 4rem 2rem; color: #94a3b8;">
+                <svg width="48" height="48" fill="none" stroke="#cbd5e1" stroke-width="1.5" viewBox="0 0 24 24" style="display: block; margin-bottom: 1rem;">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
                 </svg>
                 <p style="font-size: 0.9375rem; font-weight: 600; color: #475569; margin-bottom: 0.5rem;">No books found</p>

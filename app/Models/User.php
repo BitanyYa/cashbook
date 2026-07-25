@@ -115,7 +115,7 @@ class User extends Authenticatable
     {
         if (!$book) return false;
         $role = $this->getBookRole($book);
-        return in_array($role, ['primary_admin', 'admin', 'employee']);
+        return in_array($role, ['primary_admin', 'admin', 'operator', 'employee']);
     }
 
     public function canManageBook(?Book $book): bool

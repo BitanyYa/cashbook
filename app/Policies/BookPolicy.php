@@ -14,8 +14,8 @@ class BookPolicy
     {
         $role = $user->getBookRole($book);
 
-        // Primary admins, admins, and employees can view books they have access to
-        return in_array($role, ['primary_admin', 'admin', 'employee']);
+        // Primary admins, admins, operators, employees, and viewers can view books they have access to
+        return in_array($role, ['primary_admin', 'admin', 'operator', 'employee', 'viewer']);
     }
 
     /**
