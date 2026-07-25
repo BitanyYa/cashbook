@@ -21,6 +21,10 @@ Route::get('/dashboard', function () {
     return redirect()->route('books.index');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
+Route::get('/unassigned', function () {
+    return view('unassigned');
+})->middleware(['auth'])->name('unassigned');
+
 Route::middleware('auth')->group(function () {
     // Business selection and core resources
     Route::post('/business/switch/{business}', [BusinessSwitcherController::class, 'switch'])->name('business.switch');
@@ -31,15 +35,24 @@ Route::middleware('auth')->group(function () {
         Route::get('books/{book}/transactions/data', [\App\Http\Controllers\BookController::class, 'transactionsData'])->name('books.transactions.data');
         Route::post('books/{book}/summary', [\App\Http\Controllers\BookController::class, 'summary'])->name('books.summary');
 
-        // User search route (accessible to anyone who can view the book)
+        // User search route
         Route::get('books/{book}/users/search', [\App\Http\Controllers\BookController::class, 'searchUsers'])->name('books.users.search');
 
-        // Book user management routes (admin/primary_admin only)
+        // Admin User Search & Cashbook Member Management (admin/primary_admin only)
         Route::middleware('business.role:primary_admin,admin')->group(function() {
+            Route::get('/admin/users', [\App\Http\Controllers\AdminUserController::class, 'index'])->name('admin.users.index');
+            Route::get('/admin/users/search', [\App\Http\Controllers\AdminUserController::class, 'search'])->name('admin.users.search');
+
+            // Member management endpoints (supporting both /cashbooks and /books URL patterns)
+            Route::post('/cashbooks/{book}/members', [\App\Http\Controllers\AdminUserController::class, 'addMember'])->name('cashbooks.members.add');
+            Route::delete('/cashbooks/{book}/members/{user}', [\App\Http\Controllers\AdminUserController::class, 'removeMember'])->name('cashbooks.members.remove');
+            Route::post('/books/{book}/members', [\App\Http\Controllers\AdminUserController::class, 'addMember'])->name('books.members.add');
+            Route::delete('/books/{book}/members/{user}', [\App\Http\Controllers\AdminUserController::class, 'removeMember'])->name('books.members.remove');
+
             Route::get('books/{book}/users', [\App\Http\Controllers\BookController::class, 'users'])->name('books.users');
-            Route::post('books/{book}/users/invite', [\App\Http\Controllers\BookController::class, 'inviteUser'])->name('books.users.invite');
             Route::put('books/{book}/users/{user}/role', [\App\Http\Controllers\BookController::class, 'updateUserRole'])->name('books.users.role');
             Route::delete('books/{book}/users/{user}', [\App\Http\Controllers\BookController::class, 'removeUser'])->name('books.users.remove');
+            Route::post('books/{book}/transfer-ownership', [\App\Http\Controllers\BookController::class, 'transferOwnership'])->name('books.transfer-ownership');
         });
 
         Route::resource('categories', \App\Http\Controllers\CategoryController::class)->except(['show']);

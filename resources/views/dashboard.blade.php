@@ -54,7 +54,7 @@
 {{-- ── 1. Header ── --}}
 @php
     $netBalance  = $totalIncome - $totalExpense;
-    $userRole    = Auth::user()->businesses()->where('business_id', $activeBusiness->id)->value('role');
+    $userRole    = Auth::user()->businesses()->where('business_id', $activeBusiness->id)->value('business_user.role');
 @endphp
 
 <div class="page-header">

@@ -3,7 +3,7 @@
 
     @php
         $currentUser = Auth::user();
-        $myRole = $business->users()->where('users.id', $currentUser->id)->value('role');
+        $myRole = $business->users()->where('users.id', $currentUser->id)->value('business_user.role');
     @endphp
 
     {{-- ── Tab Header ── --}}
@@ -19,7 +19,7 @@
     </div>
 
     <div style="padding: 1.25rem 2rem 2rem;">
-
+    @if(in_array($myRole, ['primary_admin', 'admin']))
         {{-- ── Toolbar: Search + Actions ── --}}
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; gap: 1rem; flex-wrap: wrap;">
             {{-- Search --}}
@@ -36,13 +36,6 @@
 
             {{-- Right actions --}}
             <div style="display: flex; align-items: center; gap: 10px;">
-                {{-- View toggle --}}
-                <button type="button" style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid #e5e7eb; border-radius: 7px; background: #fff; cursor: pointer; color: #6b7280;">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 6h18M3 14h18M3 18h18"/>
-                    </svg>
-                </button>
-
                 {{-- Download button --}}
                 <button type="button" onclick="downloadCSV()" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1px solid #e5e7eb; border-radius: 7px; background: #fff; cursor: pointer; font-size: 0.8125rem; font-weight: 500; color: #374151; font-family: inherit;">
                     <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -54,21 +47,21 @@
         </div>
 
         {{-- ── Filter Dropdowns ── --}}
-        <div style="display: flex; gap: 8px; margin-bottom: 1.25rem;" x-data="{ inviteOpen: false, roleOpen: false, roleFilter: 'all' }">
+        <div style="display: flex; gap: 8px; margin-bottom: 1.25rem;" x-data="{ inviteOpen: false, roleOpen: false, roleFilter: 'all', inviteFilter: 'all' }">
             {{-- Invite Status --}}
             <div style="position: relative;">
                 <button @click="inviteOpen = !inviteOpen" type="button"
                         style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid #e5e7eb; border-radius: 7px; background: #fff; font-size: 0.8125rem; color: #374151; cursor: pointer; font-family: inherit;">
-                    Invite Status
+                    <span x-text="'Invite Status: ' + (inviteFilter === 'all' ? 'All' : inviteFilter.charAt(0).toUpperCase() + inviteFilter.slice(1))">Invite Status: All</span>
                     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
                     </svg>
                 </button>
                 <div x-show="inviteOpen" @click.away="inviteOpen = false" x-cloak
-                     style="position: absolute; top: calc(100% + 4px); left: 0; background: #fff; border: 1px solid #e5e7eb; border-radius: 7px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); z-index: 50; min-width: 140px; padding: 4px 0;">
-                    <button type="button" style="display: block; width: 100%; text-align: left; padding: 8px 12px; font-size: 0.8125rem; color: #374151; background: none; border: none; cursor: pointer; font-family: inherit;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">All</button>
-                    <button type="button" style="display: block; width: 100%; text-align: left; padding: 8px 12px; font-size: 0.8125rem; color: #374151; background: none; border: none; cursor: pointer; font-family: inherit;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">Accepted</button>
-                    <button type="button" style="display: block; width: 100%; text-align: left; padding: 8px 12px; font-size: 0.8125rem; color: #374151; background: none; border: none; cursor: pointer; font-family: inherit;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">Pending</button>
+                     style="position: absolute; top: calc(100% + 4px); left: 0; background: #fff; border: 1px solid #e5e7eb; border-radius: 7px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); z-index: 50; min-width: 160px; padding: 4px 0;">
+                    <button @click="inviteFilter='all'; inviteOpen=false; currentInviteFilter='all'; filterMembers()" type="button" style="display: block; width: 100%; text-align: left; padding: 8px 12px; font-size: 0.8125rem; color: #374151; background: none; border: none; cursor: pointer; font-family: inherit;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">All Statuses</button>
+                    <button @click="inviteFilter='accepted'; inviteOpen=false; currentInviteFilter='accepted'; filterMembers()" type="button" style="display: block; width: 100%; text-align: left; padding: 8px 12px; font-size: 0.8125rem; color: #374151; background: none; border: none; cursor: pointer; font-family: inherit;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">Accepted</button>
+                    <button @click="inviteFilter='pending'; inviteOpen=false; currentInviteFilter='pending'; filterMembers()" type="button" style="display: block; width: 100%; text-align: left; padding: 8px 12px; font-size: 0.8125rem; color: #374151; background: none; border: none; cursor: pointer; font-family: inherit;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">Pending</button>
                 </div>
             </div>
 
@@ -76,17 +69,17 @@
             <div style="position: relative;">
                 <button @click="roleOpen = !roleOpen" type="button"
                         style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid #e5e7eb; border-radius: 7px; background: #fff; font-size: 0.8125rem; color: #374151; cursor: pointer; font-family: inherit;">
-                    Role
+                    <span x-text="'Role: ' + (roleFilter === 'all' ? 'All' : roleFilter.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '))">Role: All</span>
                     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
                     </svg>
                 </button>
                 <div x-show="roleOpen" @click.away="roleOpen = false" x-cloak
                      style="position: absolute; top: calc(100% + 4px); left: 0; background: #fff; border: 1px solid #e5e7eb; border-radius: 7px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); z-index: 50; min-width: 160px; padding: 4px 0;">
-                    <button @click="roleFilter='all'; roleOpen=false; filterMembers()" type="button" style="display: block; width: 100%; text-align: left; padding: 8px 12px; font-size: 0.8125rem; color: #374151; background: none; border: none; cursor: pointer; font-family: inherit;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">All Roles</button>
-                    <button @click="roleFilter='primary_admin'; roleOpen=false; filterMembers()" type="button" style="display: block; width: 100%; text-align: left; padding: 8px 12px; font-size: 0.8125rem; color: #374151; background: none; border: none; cursor: pointer; font-family: inherit;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">Primary Admin</button>
-                    <button @click="roleFilter='admin'; roleOpen=false; filterMembers()" type="button" style="display: block; width: 100%; text-align: left; padding: 8px 12px; font-size: 0.8125rem; color: #374151; background: none; border: none; cursor: pointer; font-family: inherit;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">Admin</button>
-                    <button @click="roleFilter='employee'; roleOpen=false; filterMembers()" type="button" style="display: block; width: 100%; text-align: left; padding: 8px 12px; font-size: 0.8125rem; color: #374151; background: none; border: none; cursor: pointer; font-family: inherit;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">Employee</button>
+                    <button @click="roleFilter='all'; roleOpen=false; currentRoleFilter='all'; filterMembers()" type="button" style="display: block; width: 100%; text-align: left; padding: 8px 12px; font-size: 0.8125rem; color: #374151; background: none; border: none; cursor: pointer; font-family: inherit;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">All Roles</button>
+                    <button @click="roleFilter='primary_admin'; roleOpen=false; currentRoleFilter='primary_admin'; filterMembers()" type="button" style="display: block; width: 100%; text-align: left; padding: 8px 12px; font-size: 0.8125rem; color: #374151; background: none; border: none; cursor: pointer; font-family: inherit;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">Primary Admin</button>
+                    <button @click="roleFilter='admin'; roleOpen=false; currentRoleFilter='admin'; filterMembers()" type="button" style="display: block; width: 100%; text-align: left; padding: 8px 12px; font-size: 0.8125rem; color: #374151; background: none; border: none; cursor: pointer; font-family: inherit;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">Admin</button>
+                    <button @click="roleFilter='employee'; roleOpen=false; currentRoleFilter='employee'; filterMembers()" type="button" style="display: block; width: 100%; text-align: left; padding: 8px 12px; font-size: 0.8125rem; color: #374151; background: none; border: none; cursor: pointer; font-family: inherit;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">Employee</button>
                 </div>
             </div>
         </div>
@@ -114,29 +107,21 @@
                             data-name="{{ strtolower($member->name) }}"
                             data-email="{{ strtolower($member->email) }}"
                             data-role="{{ $memberRole }}"
+                            data-status="accepted"
                             style="border-bottom: 1px solid #f8fafc; transition: background 0.15s;"
                             onmouseover="this.style.background='#fafafa'"
                             onmouseout="this.style.background='#fff'">
 
-                            {{-- Name --}}
                             <td style="padding: 14px 16px; color: #111827; font-weight: 500; font-size: 0.875rem;">
                                 {{ $displayName }}
                             </td>
-
-                            {{-- Employee ID --}}
                             <td style="padding: 14px 16px; color: #9ca3af; font-size: 0.875rem;">-</td>
-
-                            {{-- Email --}}
                             <td style="padding: 14px 16px; color: #374151; font-size: 0.875rem;">
                                 {{ $member->email ?? '-' }}
                             </td>
-
-                            {{-- Mobile Number --}}
                             <td style="padding: 14px 16px; color: #374151; font-size: 0.875rem;">
                                 {{ $member->phone ?? '-' }}
                             </td>
-
-                            {{-- Role Badge --}}
                             <td style="padding: 14px 16px;">
                                 @if($memberRole === 'primary_admin')
                                     <span style="display: inline-block; padding: 3px 10px; border-radius: 5px; font-size: 0.78rem; font-weight: 600; background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;">Primary Admin</span>
@@ -152,7 +137,7 @@
             </table>
         </div>
 
-        {{-- ── Collapsible Manage Section (invite, role change, remove, leave) ── --}}
+        {{-- ── Collapsible Manage Section ── --}}
         <div style="margin-top: 2rem;" x-data="{ showManage: false }">
             <button @click="showManage = !showManage" type="button"
                     style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1px solid #e5e7eb; border-radius: 7px; background: #f9fafb; font-size: 0.8125rem; font-weight: 500; color: #374151; cursor: pointer; font-family: inherit;">
@@ -166,31 +151,27 @@
             </button>
 
             <div x-show="showManage" x-cloak style="margin-top: 1.5rem; display: grid; gap: 1.5rem;">
-
-                {{-- Invite New Member --}}
                 <div style="padding: 1.5rem; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;">
-                    <h2 style="font-size: 1rem; font-weight: 600; color: #111827; margin-bottom: 1rem;">Invite New Member</h2>
+                    <h2 style="font-size: 1rem; font-weight: 600; color: #111827; margin-bottom: 1rem;">Add Member by Email</h2>
                     <form method="post" action="{{ route('settings.invite') }}" style="max-width: 32rem;">
                         @csrf
                         <div style="margin-bottom: 1rem;">
-                            <label style="display: block; font-size: 0.8125rem; font-weight: 500; color: #374151; margin-bottom: 5px;">Email</label>
-                            <input type="email" name="email" value="{{ old('email') }}" placeholder="Enter email address" required
+                            <label style="display: block; font-size: 0.8125rem; font-weight: 500; color: #374151; margin-bottom: 5px;">User Email</label>
+                            <input type="email" name="email" value="{{ old('email') }}" placeholder="Enter registered user email" required
                                    style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; font-family: inherit; outline: none; box-sizing: border-box;">
                             <x-input-error :messages="$errors->get('email')" style="margin-top: 4px; font-size: 0.78rem; color: #dc2626;" />
                         </div>
                         <div style="margin-bottom: 1rem;">
                             <label style="display: block; font-size: 0.8125rem; font-weight: 500; color: #374151; margin-bottom: 5px;">Role</label>
                             <select name="role" style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; font-family: inherit; outline: none; background: #fff; max-width: 32rem; box-sizing: border-box;">
-                                <option value="primary_admin">Primary Admin</option>
                                 <option value="admin">Admin</option>
                                 <option value="employee" selected>Employee</option>
                             </select>
                         </div>
-                        <button type="submit" style="padding: 8px 18px; background: #4f46e5; color: #fff; border: none; border-radius: 6px; font-size: 0.875rem; font-weight: 600; cursor: pointer; font-family: inherit;">Invite</button>
+                        <button type="submit" style="padding: 8px 18px; background: #4f46e5; color: #fff; border: none; border-radius: 6px; font-size: 0.875rem; font-weight: 600; cursor: pointer; font-family: inherit;">Add Member</button>
                     </form>
                 </div>
 
-                {{-- Member Role Management --}}
                 <div style="padding: 1.5rem; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;">
                     <h2 style="font-size: 1rem; font-weight: 600; color: #111827; margin-bottom: 1rem;">Member Roles</h2>
                     @foreach($members as $member)
@@ -200,27 +181,28 @@
                                 <div style="font-size: 0.78rem; color: #6b7280;">{{ $member->email }}</div>
                             </div>
                             <div style="display: flex; align-items: center; gap: 10px;">
-                                <form method="post" action="{{ route('settings.member.role', $member) }}">
-                                    @csrf
-                                    <select name="role" onchange="this.form.submit()" style="padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.8125rem; font-family: inherit; background: #fff; cursor: pointer;">
-                                        <option value="primary_admin" @if($member->pivot->role === 'primary_admin') selected @endif>Primary Admin</option>
-                                        <option value="admin" @if($member->pivot->role === 'admin') selected @endif>Admin</option>
-                                        <option value="employee" @if($member->pivot->role === 'employee') selected @endif>Employee</option>
-                                    </select>
-                                </form>
-                                <form method="post" action="{{ route('settings.member.remove', $member) }}">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" style="padding: 6px 12px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 6px; font-size: 0.8125rem; font-weight: 500; cursor: pointer; font-family: inherit;"
-                                            onclick="return confirm('Remove {{ $member->name }}?')">Remove</button>
-                                </form>
+                                @if($member->pivot->role === 'primary_admin')
+                                    <span style="font-size: 0.8125rem; font-weight: 600; color: #15803d; padding: 4px 8px; background: #dcfce7; border-radius: 4px;">Primary Admin</span>
+                                @else
+                                    <form method="post" action="{{ route('settings.member.role', $member) }}">
+                                        @csrf
+                                        <select name="role" onchange="this.form.submit()" style="padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.8125rem; font-family: inherit; background: #fff; cursor: pointer;">
+                                            <option value="admin" @if($member->pivot->role === 'admin') selected @endif>Admin</option>
+                                            <option value="employee" @if($member->pivot->role === 'employee') selected @endif>Employee</option>
+                                        </select>
+                                    </form>
+                                    <form method="post" action="{{ route('settings.member.remove', $member) }}">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" onclick="return confirm('Remove member from business?')" style="padding: 6px 10px; border: 1px solid #fca5a5; border-radius: 6px; font-size: 0.8125rem; color: #dc2626; background: #fff; cursor: pointer;">Remove</button>
+                                    </form>
+                                @endif
                             </div>
                         </div>
                     @endforeach
                     <x-input-error :messages="$errors->get('member')" style="margin-top: 8px; font-size: 0.78rem; color: #dc2626;" />
                 </div>
-
-                {{-- Leave Business --}}
+                
                 <div style="padding: 1.5rem; background: #fff; border: 1px solid #fee2e2; border-radius: 8px;">
                     <h2 style="font-size: 1rem; font-weight: 600; color: #dc2626; margin-bottom: 6px;">Leave Business</h2>
                     <p style="font-size: 0.8125rem; color: #6b7280; margin-bottom: 1rem;">If you leave this business, you will lose access to all of its resources.</p>
@@ -231,22 +213,58 @@
                                 onclick="return confirm('Are you sure you want to leave this business?')">Leave Business</button>
                     </form>
                 </div>
-
             </div>
         </div>
+    @else
+        {{-- ── Employee View: Leave Business only ── --}}
+        <div style="max-width: 540px; margin: 2rem auto; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <h2 style="font-size: 1.25rem; font-weight: 700; color: #111827; margin-bottom: 0.5rem;">Business Settings</h2>
+            <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 1.5rem;">
+                You are a member of <strong>{{ $business->name }}</strong>.
+            </p>
 
+            <div style="padding: 1.25rem; background: #fef2f2; border: 1px solid #fee2e2; border-radius: 8px;">
+                <h3 style="font-size: 0.9375rem; font-weight: 600; color: #dc2626; margin-bottom: 0.35rem;">Leave Business</h3>
+                <p style="font-size: 0.8125rem; color: #7f1d1d; margin-bottom: 1rem;">
+                    If you leave this business, you will lose access to all of its resources and cashbooks.
+                </p>
+                <form method="post" action="{{ route('settings.leave') }}">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" 
+                            style="padding: 8px 18px; background: #dc2626; color: #fff; border: none; border-radius: 6px; font-size: 0.875rem; font-weight: 600; cursor: pointer; font-family: inherit;"
+                            onclick="return confirm('Are you sure you want to leave this business?')">
+                        Leave Business
+                    </button>
+                </form>
+            </div>
+        </div>
+    @endif
     </div>
 </div>
 
 <script>
+let currentRoleFilter = 'all';
+let currentInviteFilter = 'all';
+
 function filterMembers() {
     const search = document.getElementById('memberSearch').value.toLowerCase();
     const rows = document.querySelectorAll('.member-row');
     rows.forEach(function(row) {
         const name = row.getAttribute('data-name') || '';
         const email = row.getAttribute('data-email') || '';
-        const matches = name.includes(search) || email.includes(search);
-        row.style.display = matches ? '' : 'none';
+        const role = row.getAttribute('data-role') || '';
+        const status = row.getAttribute('data-status') || '';
+        
+        const matchesSearch = name.includes(search) || email.includes(search);
+        const matchesRole = currentRoleFilter === 'all' || role === currentRoleFilter;
+        const matchesInvite = currentInviteFilter === 'all' || status === currentInviteFilter;
+        
+        if (matchesSearch && matchesRole && matchesInvite) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
     });
 }
 

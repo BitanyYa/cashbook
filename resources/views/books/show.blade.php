@@ -117,6 +117,7 @@ $pillStyle = "display:inline-flex;align-items:center;padding:6px 28px 6px 12px;f
             <option value="{{ $cat->id }}">{{ $cat->name }}</option>
         @endforeach
     </select>
+    <button type="button" onclick="clearAllFilters()" style="padding:.35rem .75rem;background:#fff;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;">Clear Filters</button>
 </div>
 
 {{-- ══ 3. SEARCH + CASH IN / CASH OUT ══ --}}
@@ -127,6 +128,7 @@ $pillStyle = "display:inline-flex;align-items:center;padding:6px 28px 6px 12px;f
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
         </svg>
         <input id="filter-search" type="text" placeholder="Search by remark or amount..."
+               oninput="debounceSearch()"
                style="width:100%;padding:.45rem 2.5rem .45rem 2.1rem;border:1px solid var(--gray-300);border-radius:6px;font-size:.8125rem;font-family:inherit;outline:none;color:var(--gray-700);background:#fff;transition:border-color .15s;"
                onfocus="this.style.borderColor='var(--primary-color)'" onblur="this.style.borderColor='var(--gray-300)'">
         <span style="position:absolute;right:.65rem;top:50%;transform:translateY(-50%);font-size:.75rem;color:var(--gray-400);pointer-events:none;">/</span>
@@ -428,31 +430,25 @@ $pillStyle = "display:inline-flex;align-items:center;padding:6px 28px 6px 12px;f
 
     <!-- Edit Transaction Modal -->
     <x-modal name="edit-transaction" :show="false" class="modal-hidden">
-        <div style="padding: 0.85rem 1rem 1.1rem; max-width: 360px; min-width: 280px; margin: 0 auto;">
-
-            {{-- Header --}}
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;">
-                <h3 style="font-size:.95rem;font-weight:700;color:var(--gray-900);margin:0;">Edit Entry</h3>
-            </div>
+        <div style="padding:1.5rem 1.75rem 1.75rem;">
+            <h3 style="font-size:1.0625rem;font-weight:700;color:var(--gray-900);margin:0 0 1.25rem;">Edit Entry</h3>
 
             <form id="edit-transaction-form" method="POST" enctype="multipart/form-data"
-                  style="display:flex;flex-direction:column;gap:.6rem;">
+                  style="display:flex;flex-direction:column;gap:1.125rem;">
                 @csrf
                 @method('PUT')
                 <input type="hidden" name="book_id" value="{{ $book->id }}">
                 <input type="hidden" id="edit_transaction_id" name="transaction_id" value="">
                 <input type="hidden" id="edit_type" name="type" value="income">
 
-                {{-- Cash In / Cash Out Toggle --}}
-                <div style="display:flex;gap:.35rem;">
-                    <button type="button" id="edit-cash-in-btn"
-                            onclick="setEditType('income')"
-                            style="padding:.3rem .85rem;border-radius:50px;border:1.5px solid var(--gray-300);background:#fff;font-size:.75rem;font-weight:600;color:var(--gray-700);cursor:pointer;transition:all .15s;">
+                {{-- Toggle --}}
+                <div style="display:flex;gap:.5rem;">
+                    <button type="button" id="edit-cash-in-btn" onclick="setEditType('income')"
+                            style="padding:.45rem 1.25rem;border-radius:50px;border:1.5px solid var(--success-color);background:var(--success-color);font-size:.875rem;font-weight:600;color:#fff;cursor:pointer;transition:all .15s;">
                         Cash In
                     </button>
-                    <button type="button" id="edit-cash-out-btn"
-                            onclick="setEditType('expense')"
-                            style="padding:.3rem .85rem;border-radius:50px;border:1.5px solid var(--danger-color);background:var(--danger-color);font-size:.75rem;font-weight:600;color:#fff;cursor:pointer;transition:all .15s;">
+                    <button type="button" id="edit-cash-out-btn" onclick="setEditType('expense')"
+                            style="padding:.45rem 1.25rem;border-radius:50px;border:1.5px solid var(--gray-300);background:#fff;font-size:.875rem;font-weight:600;color:var(--gray-700);cursor:pointer;transition:all .15s;">
                         Cash Out
                     </button>
                 </div>
@@ -682,11 +678,14 @@ $pillStyle = "display:inline-flex;align-items:center;padding:6px 28px 6px 12px;f
 
                 <div id="custom-fields-container" class="form-group"></div>
 
-                {{-- Save button --}}
-                <button type="submit"
-                        style="width:auto;padding:.5rem 1.6rem;background:var(--primary-color);color:#fff;border:none;border-radius:8px;font-size:.875rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.01em;align-self:flex-start;margin-top:.1rem;">
-                    Save
-                </button>
+                {{-- Form Footer --}}
+                <div style="display:flex;justify-content:flex-end;gap:.625rem;border-top:1px solid var(--gray-200);
+                            padding:1rem 0 0;position:sticky;bottom:0;background:#fff;padding-top:.875rem;margin-top:.5rem;">
+                    <button type="button" @click="$dispatch('close-modal','edit-transaction')" class="btn btn-secondary">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
             </form>
         </div>
     </x-modal>
@@ -751,9 +750,9 @@ $pillStyle = "display:inline-flex;align-items:center;padding:6px 28px 6px 12px;f
                     <div class="form-group">
                         <label for="user_role" class="form-label">Role</label>
                         <select id="user_role" name="role" class="form-select" required>
-                            <option value="employee">Employee - Can add/edit own transactions</option>
-                            <option value="admin">Admin - Can manage books, members, and transactions</option>
-                            <option value="primary_admin">Primary Admin - Full access to book and business management</option>
+                            <option value="operator" selected>Operator - Can add & edit transactions</option>
+                            <option value="admin">Admin - Can manage book, members, and transactions</option>
+                            <option value="viewer">Viewer - Read-only access to transactions & reports</option>
                         </select>
                     </div>
 
@@ -871,9 +870,12 @@ $pillStyle = "display:inline-flex;align-items:center;padding:6px 28px 6px 12px;f
         });
 
         // ── reloadTable — called by pill filter onchange ──
-        function reloadTable() {
+        function reloadTable(resetPage = true) {
             if (dataTable) {
-                dataTable.ajax.reload();
+                if (resetPage) {
+                    dataTable.page('first');
+                }
+                dataTable.ajax.reload(null, false);
                 updateSummaryCards();
             }
         }
@@ -883,14 +885,26 @@ $pillStyle = "display:inline-flex;align-items:center;padding:6px 28px 6px 12px;f
         function debounceSearch() {
             clearTimeout(searchTimer);
             searchTimer = setTimeout(function() {
-                if (dataTable) { dataTable.ajax.reload(); updateSummaryCards(); }
+                if (dataTable) {
+                    dataTable.page('first');
+                    dataTable.ajax.reload(null, false);
+                    updateSummaryCards();
+                }
             }, 300);
+        }
+
+        function clearAllFilters() {
+            ['filter-duration', 'filter-type', 'filter-contact', 'filter-member', 'filter-mode', 'filter-category', 'filter-search'].forEach(function(id) {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            reloadTable(true);
         }
 
         // Initialize DataTable
         $(document).ready(function() {
             dataTable = $('#transactions-table').DataTable({
-                processing: true,
+                processing: false,
                 serverSide: true,
                 dom: 'rt', // Hide default DataTables search, page length and paginator
                 ajax: {
@@ -904,6 +918,10 @@ $pillStyle = "display:inline-flex;align-items:center;padding:6px 28px 6px 12px;f
                         d.mode     = document.getElementById('filter-mode')?.value     || '';
                         d.category = document.getElementById('filter-category')?.value || '';
                         d.search   = document.getElementById('filter-search')?.value   || '';
+                    },
+                    error: function(xhr, error, thrown) {
+                        console.error('DataTable AJAX error:', xhr.status, thrown, xhr.responseText);
+                        showNotification('Failed to load transactions: ' + (thrown || 'server error'), 'error');
                     }
                 },
                 columns: [
@@ -2013,6 +2031,9 @@ $pillStyle = "display:inline-flex;align-items:center;padding:6px 28px 6px 12px;f
             const container = document.getElementById('users-list');
             container.innerHTML = '';
 
+            const currentUserRole = "{{ $userRole }}";
+            const currentUserId = {{ Auth::id() }};
+
             if (users.length === 0) {
                 container.innerHTML = '<p style="color: var(--gray-500); text-align: center; padding: 1rem;">No users assigned to this book yet.</p>';
                 return;
@@ -2020,30 +2041,118 @@ $pillStyle = "display:inline-flex;align-items:center;padding:6px 28px 6px 12px;f
 
             users.forEach(user => {
                 const userElement = document.createElement('div');
-                userElement.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: white; border: 1px solid var(--gray-200); border-radius: var(--border-radius); margin-bottom: 0.5rem;';
+                userElement.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: white; border: 1px solid var(--gray-200); border-radius: var(--border-radius); margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;';
 
-                userElement.innerHTML = `
-                    <div>
-                        <div style="font-weight: 600; color: var(--gray-900);">${user.name}</div>
-                        <div style="font-size: 0.875rem; color: var(--gray-500);">${user.email}</div>
-                        <div style="font-size: 0.75rem; color: var(--gray-400);">Added on ${user.assigned_at}</div>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <select onchange="updateUserRole(${user.id}, this.value)" style="font-size: 0.875rem; padding: 0.25rem 0.5rem; border: 1px solid var(--gray-300); border-radius: 0.25rem;">
-                            <option value="employee" ${user.role === 'employee' ? 'selected' : ''}>Employee</option>
+                let roleControlHtml = '';
+
+                if (user.role === 'primary_admin') {
+                    roleControlHtml = `
+                        <span style="display: inline-block; padding: 0.25rem 0.6rem; background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; border-radius: 6px; font-size: 0.78rem; font-weight: 700;">
+                            Primary Admin (Owner)
+                        </span>
+                    `;
+                } else if (currentUserRole === 'primary_admin') {
+                    // Primary admin can change role or transfer ownership
+                    roleControlHtml = `
+                        <select onchange="updateUserRole(${user.id}, this.value)" style="font-size: 0.8125rem; padding: 0.35rem 0.5rem; border: 1px solid var(--gray-300); border-radius: 6px; outline: none; background: #fff;">
+                            <option value="operator" ${user.role === 'operator' || user.role === 'employee' ? 'selected' : ''}>Operator</option>
                             <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
-                            <option value="primary_admin" ${user.role === 'primary_admin' ? 'selected' : ''}>Primary Admin</option>
+                            <option value="viewer" ${user.role === 'viewer' ? 'selected' : ''}>Viewer</option>
                         </select>
-                        <button onclick="removeUserFromBook(${user.id})" style="background: none; border: none; color: var(--danger-color); cursor: pointer; padding: 0.25rem;">
-                            <svg style="width: 1rem; height: 1rem;" fill="currentColor" viewBox="0 0 20 20">
+                        <button type="button" onclick="transferOwnershipToUser(${user.id}, '${escapeJsString(user.name)}')" 
+                                title="Transfer Ownership to this member"
+                                style="padding: 0.35rem 0.65rem; background: #ea580c; color: #fff; border: none; border-radius: 6px; font-weight: 600; font-size: 0.75rem; cursor: pointer; font-family: inherit;">
+                            Make Owner
+                        </button>
+                        <button type="button" onclick="removeUserFromBook(${user.id})" title="Remove Member" style="background: none; border: none; color: var(--danger-color); cursor: pointer; padding: 0.25rem;">
+                            <svg style="width: 1.1rem; height: 1.1rem;" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
                             </svg>
                         </button>
+                    `;
+                } else if (currentUserRole === 'admin') {
+                    // Admin can see roles, but can only remove regular non-admin users
+                    const roleLabel = user.role === 'admin' ? 'Admin' : (user.role === 'viewer' ? 'Viewer' : 'Operator');
+                    const canRemove = user.role !== 'admin' && user.role !== 'primary_admin';
+
+                    roleControlHtml = `
+                        <span style="font-size: 0.8125rem; font-weight: 600; color: #475569; padding: 0.25rem 0.5rem; background: #f1f5f9; border-radius: 4px;">
+                            ${roleLabel}
+                        </span>
+                        ${canRemove ? `
+                            <button type="button" onclick="removeUserFromBook(${user.id})" title="Remove Member" style="background: none; border: none; color: var(--danger-color); cursor: pointer; padding: 0.25rem;">
+                                <svg style="width: 1.1rem; height: 1.1rem;" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        ` : ''}
+                    `;
+                } else {
+                    // Regular user view
+                    const roleLabel = user.role === 'admin' ? 'Admin' : (user.role === 'viewer' ? 'Viewer' : 'Operator');
+                    roleControlHtml = `
+                        <span style="font-size: 0.8125rem; font-weight: 600; color: #475569; padding: 0.25rem 0.5rem; background: #f1f5f9; border-radius: 4px;">
+                            ${roleLabel}
+                        </span>
+                    `;
+                }
+
+                userElement.innerHTML = `
+                    <div>
+                        <div style="font-weight: 600; color: var(--gray-900);">${escapeHtmlString(user.name)} ${user.id === currentUserId ? ' (You)' : ''}</div>
+                        <div style="font-size: 0.875rem; color: var(--gray-500);">${escapeHtmlString(user.email)}</div>
+                        <div style="font-size: 0.75rem; color: var(--gray-400);">Added on ${user.assigned_at}</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        ${roleControlHtml}
                     </div>
                 `;
 
                 container.appendChild(userElement);
             });
+        }
+
+        function transferOwnershipToUser(userId, userName) {
+            if (!confirm(`Are you sure you want to transfer Primary Admin ownership of this cashbook to ${userName}? You will become an Admin of this cashbook.`)) {
+                return;
+            }
+
+            fetch(`/books/{{ $book->id }}/transfer-ownership`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ new_owner_id: userId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(data.message, 'success');
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    showNotification(data.message || 'Error transferring ownership', 'error');
+                }
+            })
+            .catch(err => {
+                showNotification('Error transferring ownership', 'error');
+            });
+        }
+
+        function escapeJsString(str) {
+            if (!str) return '';
+            return str.replace(/'/g, "\\'").replace(/"/g, '\\"');
+        }
+
+        function escapeHtmlString(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
 
         function addUserToBook() {
@@ -2061,7 +2170,7 @@ $pillStyle = "display:inline-flex;align-items:center;padding:6px 28px 6px 12px;f
             submitBtn.textContent = 'Adding...';
             submitBtn.disabled = true;
 
-            fetch(`/books/{{ $book->id }}/users/invite`, {
+            fetch(`/books/{{ $book->id }}/members`, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': csrfToken,

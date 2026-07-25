@@ -21,6 +21,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
     ];
 
     /**
@@ -81,50 +82,62 @@ class User extends Authenticatable
     }
 
     // Book role helper methods
-    public function getBusinessRole(Business $business): ?string
+    public function getBusinessRole(?Business $business): ?string
     {
-        return $this->businesses()->where('business_id', $business->id)->value('role');
+        if (!$business) {
+            return null;
+        }
+        return $this->businesses()->where('business_id', $business->id)->value('business_user.role');
     }
 
-    public function getBookRole(Book $book): ?string
+    public function getBookRole(?Book $book): ?string
     {
-        // Business-level primary_admin/admin implicitly have primary_admin access to every book.
-        // This ensures they are never locked out even without an explicit book_user row.
-        $businessRole = $this->getBusinessRole($book->business);
+        if (!$book) {
+            return null;
+        }
+        
+        $businessRole = $book->business_id ? $this->getBusinessRole($book->business) : null;
         if (in_array($businessRole, ['primary_admin', 'admin'])) {
             return $businessRole;
         }
 
         // Fall back to the explicit book_user pivot role.
-        return $this->books()->where('book_id', $book->id)->value('role');
+        return $this->books()->where('book_id', $book->id)->value('book_user.role');
     }
 
-    public function canViewBook(Book $book): bool
+    public function canViewBook(?Book $book): bool
     {
+        if (!$book) return false;
         return $this->getBookRole($book) !== null;
     }
 
-    public function canEditBook(Book $book): bool
+    public function canEditBook(?Book $book): bool
     {
+        if (!$book) return false;
         $role = $this->getBookRole($book);
         return in_array($role, ['primary_admin', 'admin', 'employee']);
     }
 
-    public function canManageBook(Book $book): bool
+    public function canManageBook(?Book $book): bool
     {
+        if (!$book) return false;
         $role = $this->getBookRole($book);
         return in_array($role, ['primary_admin', 'admin']);
     }
 
-    public function getUserBookRole(Book $book): ?string
+    public function getUserBookRole(?Book $book): ?string
     {
-        // get the user
+        if (!$book) return null;
         $user = $this->books()->where('book_id', $book->id)->first();
         return $user ? $user->pivot->role : null;
     }
 
-    public function accessibleBooks(Business $business)
+    public function accessibleBooks(?Business $business)
     {
+        if (!$business) {
+            return collect();
+        }
+
         // If user is a primary admin or admin, return all books
         $businessRole = $this->getBusinessRole($business);
         if (in_array($businessRole, ['primary_admin', 'admin'])) {

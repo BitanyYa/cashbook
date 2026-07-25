@@ -17,19 +17,26 @@ class EnsureBusinessRole
         $user = $request->user();
         $business = $request->attributes->get('activeBusiness');
         $book = $request->route('book');
-        if (!$user || !$business || (!$book && empty($roles))) {
-            if ($request->expectsJson()) {
-                return response()->json(['message' => 'Forbidden 1'], 403);
-            }
-            abort(403);
+
+        if (!$user) {
+            return redirect()->route('login');
         }
-        $role = $book ? $user->getBookRole($book) : $user->businesses()->where('business_id', $business->id)->value('role');
+
+        if (!$business && !$book) {
+            if ($request->expectsJson() || $request->wantsJson() || $request->ajax()) {
+                return response()->json(['message' => 'User is not yet assigned to any cashbook.'], 403);
+            }
+            return redirect()->route('unassigned');
+        }
+
+        $role = $book ? $user->getBookRole($book) : $user->getBusinessRole($business);
         if (!$role || (!empty($roles) && !in_array($role, $roles))) {
-            if ($request->expectsJson()) {
-                return response()->json(['message' => 'Forbidden 1'], 403);
+            if ($request->expectsJson() || $request->wantsJson() || $request->ajax()) {
+                return response()->json(['message' => 'User is not yet assigned to any cashbook.'], 403);
             }
-            abort(403);
+            return redirect()->route('unassigned');
         }
+
         return $next($request);
     }
 }

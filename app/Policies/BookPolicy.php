@@ -19,12 +19,12 @@ class BookPolicy
     }
 
     /**
-     * Check if user can update the book.
+     * Check if user can update the book settings.
      */
     public function update(User $user, Book $book): bool
     {
-        // Primary admins and admins can update books
-        return $user->canManageBook($book);
+        // Only Primary Admin (owner) can edit cashbook settings
+        return $user->getBookRole($book) === 'primary_admin';
     }
 
     /**
@@ -32,7 +32,25 @@ class BookPolicy
      */
     public function delete(User $user, Book $book): bool
     {
-        // Primary admins and admins can delete books
-        return $user->canManageBook($book);
+        // Only Primary Admin (owner) can delete cashbooks
+        return $user->getBookRole($book) === 'primary_admin';
+    }
+
+    /**
+     * Check if user can manage cashbook members.
+     */
+    public function manageMembers(User $user, Book $book): bool
+    {
+        // Primary Admins and Admins can manage members
+        return in_array($user->getBookRole($book), ['primary_admin', 'admin']);
+    }
+
+    /**
+     * Check if user can transfer ownership of the book.
+     */
+    public function transferOwnership(User $user, Book $book): bool
+    {
+        // Only Primary Admin (owner) can transfer ownership
+        return $user->getBookRole($book) === 'primary_admin';
     }
 }

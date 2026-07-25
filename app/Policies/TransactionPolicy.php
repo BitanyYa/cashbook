@@ -48,11 +48,12 @@ class TransactionPolicy
             return true;
         }
 
-        // Employees can only edit their own transactions
-        if ($bookRole === 'employee') {
+        // Operators / Employees can edit their own transactions
+        if (in_array($bookRole, ['operator', 'employee'])) {
             return $transaction->user_id === $user->id;
         }
 
+        // Viewers cannot edit transactions
         return false;
     }
 
@@ -72,11 +73,12 @@ class TransactionPolicy
             return true;
         }
 
-        // Employees can only delete their own transactions
-        if ($bookRole === 'employee') {
+        // Operators / Employees can delete their own transactions
+        if (in_array($bookRole, ['operator', 'employee'])) {
             return $transaction->user_id === $user->id;
         }
 
+        // Viewers cannot delete transactions
         return false;
     }
 }

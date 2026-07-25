@@ -15,35 +15,87 @@ class BookController extends Controller
         $business = $request->attributes->get('activeBusiness');
         $user = $request->user();
 
+        if (!$business) {
+            if ($request->expectsJson() || $request->wantsJson() || $request->ajax()) {
+                return response()->json(['message' => 'User is not yet assigned to any cashbook.'], 403);
+            }
+            return redirect()->route('unassigned');
+        }
+
         // Get user's role in the business
         $role = $user->getBusinessRole($business);
 
-       if (in_array($role, ['primary_admin', 'admin'])) {
-    // Primary admins and admins can see all books with access information
-    $allBooks = Book::where('business_id', $business->id)->latest('updated_at')->get();
-    $userBookIds = $user->books()->where('business_id', $business->id)->pluck('books.id')->toArray();
+        $query = Book::where('business_id', $business->id);
 
-    $books = $allBooks->map(function($book) use ($userBookIds) {
-        $book->user_has_access = in_array($book->id, $userBookIds);
-        $book->hashId = CommonHelper::encodeId($book->id);
-        return $book;
-    });
-        } else {
-    // Employees can only see books they are assigned to
-    $assignedBookIds = $user->books()->where('business_id', $business->id)->pluck('books.id');
-    $books = Book::where('business_id', $business->id)
-                ->whereIn('id', $assignedBookIds)
-                ->latest('updated_at')->get();
+        if (!in_array($role, ['primary_admin', 'admin'])) {
+            // Employees can only see books they are assigned to
+            $assignedBookIds = $user->books()->where('business_id', $business->id)->pluck('books.id');
+            $query->whereIn('id', $assignedBookIds);
+        }
 
-    // For employees, all visible books have access
-    $books = $books->map(function($book) {
-        $book->user_has_access = true;
-        $book->hashId = CommonHelper::encodeId($book->id);
-        return $book;
-    });
-    }
+        // Apply Search Filter
+        if ($request->filled('q')) {
+            $search = $request->get('q');
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
 
-        return view('books.index', compact('books', 'role'));
+        // Apply Sorting
+        $sort = $request->get('sort', 'updated_at_desc');
+        switch ($sort) {
+            case 'name_asc':
+                $query->orderBy('name', 'asc');
+                break;
+            case 'name_desc':
+                $query->orderBy('name', 'desc');
+                break;
+            case 'updated_at_asc':
+                $query->orderBy('updated_at', 'asc');
+                break;
+            case 'updated_at_desc':
+            default:
+                $query->orderBy('updated_at', 'desc');
+                break;
+        }
+
+        $userBookIds = $user->books()->where('business_id', $business->id)->pluck('books.id')->toArray();
+        $books = $query->paginate(12)->appends($request->query());
+
+        $books->getCollection()->transform(function($book) use ($userBookIds, $role) {
+            $book->user_has_access = in_array($role, ['primary_admin', 'admin']) ? in_array($book->id, $userBookIds) : true;
+            $book->hashId = CommonHelper::encodeId($book->id);
+            return $book;
+        });
+
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'books' => $books->map(function($book) {
+                    $income  = $book->transactions()->where('type', 'income')->where('status', 'approved')->sum('amount');
+                    $expense = $book->transactions()->where('type', 'expense')->where('status', 'approved')->sum('amount');
+                    $balance = $income - $expense;
+                    return [
+                        'id' => $book->id,
+                        'name' => $book->name,
+                        'description' => $book->description,
+                        'balance' => $balance,
+                        'balance_formatted' => number_format(abs($balance)),
+                        'balance_color' => $balance >= 0 ? '#10b981' : '#ef4444',
+                        'members_count' => $book->users()->count(),
+                        'updated_human' => $book->updated_at->diffForHumans(),
+                        'user_has_access' => $book->user_has_access,
+                        'url' => route('books.show', $book),
+                        'edit_url' => route('books.edit', $book),
+                        'users_url' => route('books.users', $book),
+                    ];
+                }),
+                'pagination' => (string) $books->links()
+            ]);
+        }
+
+        return view('books.index', compact('books', 'role', 'sort'));
     }
 
     public function create() { return view('books.create'); }
@@ -99,7 +151,9 @@ class BookController extends Controller
         $user = $request->user();
         $user->getUserBookRole($book); // Ensure the user has a role in the book
 
-        abort_unless($book->business_id === $business->id, 404);
+        if (!$business || $book->business_id !== $business->id) {
+            abort(404);
+        }
         $this->authorize('view', $book);
 
         // Get user's role in the business and book
@@ -116,13 +170,38 @@ class BookController extends Controller
         $bookUser = $user->books()->where('books.id', $book->id)->first();
         $bookRole = $bookUser ? $bookUser->pivot->role : null;
 
-        $transactions = $book->transactions()->with(['category','user'])
-            ->orderByDesc('transaction_date')
+        $query = $book->transactions()->with(['category', 'user']);
+
+        if ($request->filled('duration')) {
+            $this->applyDurationFilter($query, $request->duration);
+        }
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+        if ($request->filled('member')) {
+            $query->where('user_id', $request->member);
+        }
+        if ($request->filled('category')) {
+            $query->where('category_id', $request->category);
+        }
+        if ($request->filled('mode')) {
+            $query->where('mode', $request->mode);
+        }
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('description', 'like', "%{$search}%")
+                  ->orWhere('amount', 'like', "%{$search}%");
+            });
+        }
+
+        $transactions = $query->orderByDesc('transaction_date')
             ->orderByDesc('created_at')
             ->orderByDesc('id')
-            ->paginate(15);
-        $categories = Category::where('business_id', $business->id)->get();
+            ->paginate(20)
+            ->appends($request->query());
 
+        $categories = Category::where('business_id', $business->id)->get();
         $modes = $book->transactions()->distinct()->pluck('mode')->filter()->values();
         $contacts = $book->transactions()->whereNotNull('contact_name')->where('contact_name', '!=', '')->distinct()->pluck('contact_name')->values();
 
@@ -172,31 +251,44 @@ class BookController extends Controller
         }
 
         // Handle DataTable parameters
-        $start = $request->get('start', 0);
-        $length = $request->get('length', 25);
-        $orderColumn = $request->get('order.0.column', 0);
-        $orderDir = $request->get('order.0.dir', 'desc');
+        $start  = (int) $request->input('start', 0);
+        $length = (int) $request->input('length', 50);
 
-        $columns = ['transaction_date', 'description', 'category', 'type', 'amount', 'status', 'user', 'actions'];
-        $orderBy = $columns[$orderColumn] ?? 'transaction_date';
+        // DataTable sends order[0][column] and order[0][dir] as nested arrays
+        $orderColumnIdx = (int) ($request->input('order.0.column') ?? ($request->input('order')[0]['column'] ?? 1));
+        $orderDir       = in_array(strtolower($request->input('order.0.dir') ?? ($request->input('order')[0]['dir'] ?? 'desc')), ['asc','desc'])
+                          ? strtolower($request->input('order.0.dir') ?? ($request->input('order')[0]['dir'] ?? 'desc'))
+                          : 'desc';
+
+        // Column index map matches DataTable columns:
+        // 0=checkbox, 1=transaction_date, 2=details, 3=category, 4=mode, 5=bill, 6=amount, 7=balance, 8=actions
+        $columnMap = [
+            0 => 'transaction_date',
+            1 => 'transaction_date',
+            2 => 'transaction_date',
+            3 => 'category',
+            4 => 'mode',
+            5 => 'transaction_date',
+            6 => 'amount',
+            7 => 'transaction_date',
+            8 => 'transaction_date',
+        ];
+        $orderBy = $columnMap[$orderColumnIdx] ?? 'transaction_date';
 
         if ($orderBy === 'category') {
             $query->leftJoin('categories', 'transactions.category_id', '=', 'categories.id')
                   ->orderBy('categories.name', $orderDir)
                   ->orderBy('transactions.id', 'desc')
-                  ->select('transactions.*'); // Ensure we only select transaction columns
-        } elseif ($orderBy === 'user') {
-            $query->leftJoin('users', 'transactions.user_id', '=', 'users.id')
-                  ->orderBy('users.name', $orderDir)
-                  ->orderBy('transactions.id', 'desc')
-                  ->select('transactions.*'); // Ensure we only select transaction columns
-        } elseif ($orderBy === 'transaction_date') {
-            $query->orderBy($orderBy, $orderDir)
-                  ->orderBy('created_at', 'desc') // Secondary sort by creation time
-                  ->orderBy('id', 'desc'); // Tertiary sort by ID for ultimate consistency
+                  ->select('transactions.*');
+        } elseif ($orderBy === 'amount') {
+            $query->orderBy('amount', $orderDir)->orderBy('id', 'desc');
+        } elseif ($orderBy === 'mode') {
+            $query->orderBy('mode', $orderDir)->orderBy('id', 'desc');
         } else {
-            $query->orderBy($orderBy, $orderDir)
-                  ->orderBy('id', 'desc'); // Secondary sort by ID for consistency
+            // Default: sort by transaction_date
+            $query->orderBy('transaction_date', $orderDir)
+                  ->orderBy('created_at', 'desc')
+                  ->orderBy('id', 'desc');
         }
 
         $totalRecords = $book->transactions()->count();
@@ -373,7 +465,7 @@ class BookController extends Controller
     {
         $user = $request->user();
         $business = $request->attributes->get('activeBusiness');
-        $businessRole = $user->businesses()->where('business_id', $business->id)->value('role');
+        $businessRole = $user->getBusinessRole($business);
 
         // Determine user's role for this specific book
         if (in_array($businessRole, ['primary_admin', 'admin'])) {
@@ -537,49 +629,55 @@ class BookController extends Controller
             ], 400);
         }
 
-        // Check if user is a member of the business, if not, add them
+        // Check if user is a member of the business, if not, add them with appropriate role
         $businessUser = $business->users()->where('users.id', $data['user_id'])->first();
+        $businessRole = in_array($data['role'], ['primary_admin', 'admin']) ? $data['role'] : 'employee';
+
         if (!$businessUser) {
-            // Add user to business with 'employee' role as default
-            $business->users()->attach($data['user_id'], ['role' => 'employee']);
+            $business->users()->attach($data['user_id'], ['role' => $businessRole]);
+        } else {
+            $currentRole = $businessUser->pivot->role;
+            if ($data['role'] === 'primary_admin' || ($data['role'] === 'admin' && $currentRole === 'employee')) {
+                $business->users()->updateExistingPivot($data['user_id'], ['role' => $data['role']]);
+            }
         }
 
-        // Add user to the book with specified role
         $book->users()->attach($data['user_id'], ['role' => $data['role']]);
-
-        if ($request->ajax()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'User added to book successfully'
-            ]);
-        }
-
-        return back()->with('success', 'User added to book successfully');
+        return response()->json(['success' => true, 'message' => 'User added to book successfully']);
     }
 
     public function updateUserRole(Request $request, Book $book, User $user)
     {
         $business = $request->attributes->get('activeBusiness');
         abort_unless($book->business_id === $business->id, 404);
-        $this->authorize('update', $book);
 
-        $data = $request->validate([
-            'role' => 'required|in:primary_admin,admin,employee'
-        ]);
+        $currentUser = $request->user();
+        $currentUserRole = $currentUser->getBookRole($book);
 
-        // Check if user is assigned to this book
-        if (!$book->users()->where('users.id', $user->id)->exists()) {
+        // ONLY Primary Admin can promote or demote members
+        if ($currentUserRole !== 'primary_admin') {
             return response()->json([
                 'success' => false,
-                'message' => 'User is not assigned to this book'
-            ], 404);
+                'message' => 'Only the Primary Admin can promote or demote members.'
+            ], 403);
         }
 
-        // if the user is the primary_admin of the business, they cannot have their role changed
-        if ($user->getBusinessRole($business) === 'primary_admin') {
+        $data = $request->validate([
+            'role' => 'required|in:primary_admin,admin,operator,employee,viewer'
+        ]);
+
+        if ($data['role'] === 'primary_admin') {
             return response()->json([
                 'success' => false,
-                'message' => 'Cannot change role of business primary_admin'
+                'message' => 'Use Transfer Ownership to assign a new Primary Admin.'
+            ], 400);
+        }
+
+        $targetUserRole = $user->getBookRole($book);
+        if ($targetUserRole === 'primary_admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot change role of Primary Admin directly. Please transfer ownership first.'
             ], 403);
         }
 
@@ -599,21 +697,35 @@ class BookController extends Controller
     {
         $business = $request->attributes->get('activeBusiness');
         abort_unless($book->business_id === $business->id, 404);
-        $this->authorize('update', $book);
 
-        // Check if user is assigned to this book
-        if (!$book->users()->where('users.id', $user->id)->exists()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User is not assigned to this book'
-            ], 404);
+        $currentUser = $request->user();
+        $currentUserRole = $currentUser->getBookRole($book);
+
+        // Regular users cannot remove members
+        if (!in_array($currentUserRole, ['primary_admin', 'admin'])) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
-        // if the user is the primary_admin of the business, they cannot be removed from the book
-        if ($user->getBusinessRole($business) === 'primary_admin') {
+        // Check if target user is assigned to this book
+        if (!$book->users()->where('users.id', $user->id)->exists()) {
+            return response()->json(['success' => false, 'message' => 'User is not assigned to this book'], 404);
+        }
+
+        $targetRole = $user->getBookRole($book);
+
+        // Primary Admin cannot be removed under any circumstances
+        if ($targetRole === 'primary_admin') {
             return response()->json([
                 'success' => false,
-                'message' => 'Cannot remove business primary_admin from book'
+                'message' => 'Cannot remove the Primary Admin. Ownership must be transferred first.'
+            ], 403);
+        }
+
+        // Admins CANNOT remove other Admins or Primary Admins
+        if ($currentUserRole === 'admin' && in_array($targetRole, ['admin', 'primary_admin'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Admins can only remove regular users.'
             ], 403);
         }
 
@@ -627,5 +739,54 @@ class BookController extends Controller
         }
 
         return back()->with('success', 'User removed from book successfully');
+    }
+
+    public function transferOwnership(Request $request, Book $book)
+    {
+        $business = $request->attributes->get('activeBusiness');
+        abort_unless($book->business_id === $business->id, 404);
+
+        $currentUser = $request->user();
+        if ($currentUser->getBookRole($book) !== 'primary_admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only the Primary Admin can transfer ownership of this cashbook.'
+            ], 403);
+        }
+
+        $data = $request->validate([
+            'new_owner_id' => 'required|exists:users,id'
+        ]);
+
+        $newOwnerId = (int) $data['new_owner_id'];
+        if ($newOwnerId === $currentUser->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are already the Primary Admin.'
+            ], 400);
+        }
+
+        // Target user must be a member of the cashbook
+        if (!$book->users()->where('users.id', $newOwnerId)->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Target user must be a member of this cashbook first.'
+            ], 400);
+        }
+
+        // 1. Promote new owner to primary_admin
+        $book->users()->updateExistingPivot($newOwnerId, ['role' => 'primary_admin']);
+
+        // 2. Demote current owner to admin
+        $book->users()->updateExistingPivot($currentUser->id, ['role' => 'admin']);
+
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Ownership transferred successfully. You are now an Admin of this cashbook.'
+            ]);
+        }
+
+        return back()->with('success', 'Ownership transferred successfully.');
     }
 }

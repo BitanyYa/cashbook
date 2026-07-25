@@ -11,16 +11,33 @@ class SetActiveBusiness
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user()) {
+        $user = $request->user();
+        if ($user) {
             $activeId = session('active_business_id');
+
+            // Verify if stored active_business_id is still valid for this user
+            if ($activeId && !$user->businesses()->where('business_id', $activeId)->exists()) {
+                session()->forget('active_business_id');
+                $activeId = null;
+            }
+
             if (!$activeId) {
-                $activeId = $request->user()->businesses()->value('business_id');
-                if ($activeId) {
+                $firstBusiness = $user->businesses()->first();
+                if ($firstBusiness) {
+                    $activeId = $firstBusiness->id;
                     session(['active_business_id' => $activeId]);
                 }
             }
-            if ($activeId) {
-                $request->attributes->set('activeBusiness', Business::find($activeId));
+
+            $activeBusiness = $activeId ? Business::find($activeId) : null;
+            $request->attributes->set('activeBusiness', $activeBusiness);
+
+            // If user has no active business and is accessing a business-dependent route
+            if (!$activeBusiness && !$request->routeIs('unassigned')) {
+                if ($request->expectsJson() || $request->wantsJson() || $request->ajax()) {
+                    return response()->json(['message' => 'User is not yet assigned to any cashbook.'], 403);
+                }
+                return redirect()->route('unassigned');
             }
         }
         return $next($request);

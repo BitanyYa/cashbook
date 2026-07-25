@@ -32,6 +32,11 @@ class Book extends Model
         return $this->belongsToMany(User::class)->withPivot('role')->withTimestamps();
     }
 
+    public function categories()
+    {
+        return $this->hasMany(Category::class);
+    }
+
     // Book access helper methods
     public function userHasAccess(User $user): bool
     {

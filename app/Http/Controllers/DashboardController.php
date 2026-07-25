@@ -35,7 +35,7 @@ class DashboardController extends Controller
         }
 
         // Get user's role in the business
-        $role = $user->businesses()->where('business_id', $business->id)->value('role');
+        $role = $user->getBusinessRole($business);
 
         // Determine which books the user can access
         if (in_array($role, ['primary_admin', 'admin'])) {
@@ -95,6 +95,23 @@ class DashboardController extends Controller
             ->whereBetween('transaction_date', [$from, $to])
             ->sum('amount');
 
+        // All-time balance calculations
+        $allTimeIncome = Transaction::where('business_id', $business->id)
+            ->whereIn('book_id', $accessibleBookIds)
+            ->where('status', 'approved')
+            ->where('type', 'income')
+            ->sum('amount');
+
+        $allTimeExpense = Transaction::where('business_id', $business->id)
+            ->whereIn('book_id', $accessibleBookIds)
+            ->where('status', 'approved')
+            ->where('type', 'expense')
+            ->sum('amount');
+
+        $totalBalance = $allTimeIncome - $allTimeExpense;
+        $teamMembersCount = $business->users()->count();
+        $activeBooksCount = $accessibleBooks->count();
+
         // Get recent transactions
         $recentTransactions = Transaction::where('business_id', $business->id)
             ->whereIn('book_id', $accessibleBookIds)
@@ -117,6 +134,11 @@ class DashboardController extends Controller
             'accessibleBooks' => $accessibleBooks,
             'totalIncome' => (float) $totalIncome,
             'totalExpense' => (float) $totalExpense,
+            'allTimeIncome' => (float) $allTimeIncome,
+            'allTimeExpense' => (float) $allTimeExpense,
+            'totalBalance' => (float) $totalBalance,
+            'activeBooksCount' => $activeBooksCount,
+            'teamMembersCount' => $teamMembersCount,
             'recentTransactions' => $recentTransactions,
         ]);
     }

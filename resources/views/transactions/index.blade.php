@@ -4,7 +4,7 @@
         <p class="mt-2 text-gray-600">View and manage all transactions across your books.</p>
     </div>
 
-    <div class="flex justify-between items-center mb-6">
+    <div class="flex justify-between items-center mb-4">
         <div>
             <p class="text-sm text-gray-500">{{ $transactions->total() }} total transactions</p>
         </div>
@@ -15,6 +15,40 @@
             Add Transaction
         </a>
     </div>
+
+    {{-- Filter Toolbar --}}
+    <form id="globalTransactionsFilterForm" method="GET" action="{{ route('transactions.index') }}" class="mb-6 bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex flex-wrap gap-4 items-center justify-between">
+        <div class="flex flex-wrap gap-3 items-center flex-1">
+            <div class="relative min-w-[220px]">
+                <input type="text" name="q" value="{{ request('q') }}" placeholder="Search remarks or amount..." oninput="debouncedSubmit(this.form)" class="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                <svg class="w-4 h-4 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/></svg>
+            </div>
+
+            <select name="status" onchange="this.form.submit()" class="py-1.5 px-3 border border-gray-300 rounded-md text-sm text-gray-700 bg-white focus:ring-indigo-500 focus:border-indigo-500">
+                <option value="">Status: All</option>
+                <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Approved</option>
+                <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
+                <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Rejected</option>
+            </select>
+
+            <select name="type" onchange="this.form.submit()" class="py-1.5 px-3 border border-gray-300 rounded-md text-sm text-gray-700 bg-white focus:ring-indigo-500 focus:border-indigo-500">
+                <option value="">Types: All</option>
+                <option value="income" {{ request('type') == 'income' ? 'selected' : '' }}>Income</option>
+                <option value="expense" {{ request('type') == 'expense' ? 'selected' : '' }}>Expense</option>
+            </select>
+
+            <select name="book" onchange="this.form.submit()" class="py-1.5 px-3 border border-gray-300 rounded-md text-sm text-gray-700 bg-white focus:ring-indigo-500 focus:border-indigo-500">
+                <option value="">Books: All</option>
+                @foreach($books as $b)
+                    <option value="{{ $b->id }}" {{ request('book') == $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
+                @endforeach
+            </select>
+
+            @if(request()->filled('status') || request()->filled('type') || request()->filled('book') || request()->filled('q'))
+                <a href="{{ route('transactions.index') }}" class="text-xs font-semibold text-red-600 hover:text-red-800 ml-2">Clear Filters</a>
+            @endif
+        </div>
+    </form>
 
     <div class="bg-white shadow rounded-lg overflow-hidden">
         <div class="overflow-x-auto">
@@ -129,4 +163,14 @@
             </div>
         @endif
     </div>
+
+<script>
+let submitTimer = null;
+function debouncedSubmit(form) {
+    clearTimeout(submitTimer);
+    submitTimer = setTimeout(function() {
+        form.submit();
+    }, 400);
+}
+</script>
 </x-app-layout>

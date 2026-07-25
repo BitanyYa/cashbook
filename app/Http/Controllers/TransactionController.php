@@ -20,28 +20,52 @@ class TransactionController extends Controller
     {
         $business = $request->attributes->get('activeBusiness');
         $user = $request->user();
-        $role = $user->businesses()->where('business_id', $business->id)->value('role');
+        $role = $user->getBusinessRole($business);
 
         $query = Transaction::where('business_id', $business->id)->with(['book','category','user']);
+
         if ($role === 'employee') {
             $assignedBookIds = $user->belongsToMany(Book::class, 'book_user')->pluck('books.id');
             $query->whereIn('book_id', $assignedBookIds);
         }
-        // Optional filter by book
+
+        // Filter by book
         if ($request->filled('book')) {
             $bookId = (int) $request->get('book');
             $query->where('book_id', $bookId);
         }
-        $transactions = $query->orderByDesc('transaction_date')->paginate(15);
 
-        return view('transactions.index', compact('transactions'));
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->get('status'));
+        }
+
+        // Filter by type
+        if ($request->filled('type')) {
+            $query->where('type', $request->get('type'));
+        }
+
+        // Filter by search term
+        if ($request->filled('q')) {
+            $search = $request->get('q');
+            $query->where(function($q) use ($search) {
+                $q->where('description', 'like', "%{$search}%")
+                  ->orWhere('contact_name', 'like', "%{$search}%")
+                  ->orWhere('amount', 'like', "%{$search}%");
+            });
+        }
+
+        $transactions = $query->orderByDesc('transaction_date')->paginate(15)->appends($request->query());
+        $books = Book::where('business_id', $business->id)->get();
+
+        return view('transactions.index', compact('transactions', 'books'));
     }
 
     public function create(Request $request)
     {
         $business = $request->attributes->get('activeBusiness');
         $user = $request->user();
-        $businessRole = $user->businesses()->where('business_id', $business->id)->value('role');
+        $businessRole = $user->getBusinessRole($business);
 
         // Get books where user can add transactions (exclude employee-only access)
         if (in_array($businessRole, ['primary_admin', 'admin'])) {
@@ -79,7 +103,7 @@ class TransactionController extends Controller
     {
         $business = $request->attributes->get('activeBusiness');
         $user = $request->user();
-        $businessRole = $user->businesses()->where('business_id', $business->id)->value('role');
+        $businessRole = $user->getBusinessRole($business);
 
         $data = $request->validate([
             'book_id' => 'required|exists:books,id',
@@ -210,7 +234,7 @@ class TransactionController extends Controller
         abort_unless($transaction->business_id === $business->id, 404);
 
         $user = $request->user();
-        $businessRole = $user->businesses()->where('business_id', $business->id)->value('role');
+        $businessRole = $user->getBusinessRole($business);
 
         if (in_array($businessRole, ['primary_admin', 'admin'])) {
             $canEdit = true;
@@ -274,7 +298,7 @@ class TransactionController extends Controller
         abort_unless($transaction->business_id === $business->id, 404);
 
         $user = $request->user();
-        $businessRole = $user->businesses()->where('business_id', $business->id)->value('role');
+        $businessRole = $user->getBusinessRole($business);
 
         // Check book-level permissions
         if (in_array($businessRole, ['primary_admin', 'admin'])) {
@@ -359,7 +383,7 @@ class TransactionController extends Controller
         abort_unless($transaction->business_id === $business->id, 404);
 
         $user = $request->user();
-        $businessRole = $user->businesses()->where('business_id', $business->id)->value('role');
+        $businessRole = $user->getBusinessRole($business);
 
         // Check book-level permissions
         if (in_array($businessRole, ['primary_admin', 'admin'])) {
@@ -434,7 +458,7 @@ class TransactionController extends Controller
             }
 
             // Check permissions using the same logic as the single destroy method
-            $businessRole = $user->businesses()->where('business_id', $business->id)->value('role');
+            $businessRole = $user->getBusinessRole($business);
             $canDelete = false;
 
             if (in_array($businessRole, ['primary_admin', 'admin'])) {
@@ -577,7 +601,7 @@ class TransactionController extends Controller
         $business = $request->attributes->get('activeBusiness');
         abort_unless($transaction->business_id === $business->id, 404);
         $user = $request->user();
-        $role = $user->businesses()->where('business_id', $business->id)->value('role');
+        $role = $user->getBusinessRole($business);
         if ($role === 'employee') {
             abort_unless($user->belongsToMany(Book::class, 'book_user')->where('books.id', $transaction->book_id)->exists(), 403);
         }
@@ -591,7 +615,7 @@ class TransactionController extends Controller
         abort_unless($transaction->business_id === $business->id, 404);
 
         $user = $request->user();
-        $role = $user->businesses()->where('business_id', $business->id)->value('role');
+        $role = $user->getBusinessRole($business);
 
         // Check permissions
         if ($role === 'employee') {

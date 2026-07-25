@@ -119,14 +119,6 @@
 
                 <!-- Right: User Menu -->
                 <div class="flex items-center" style="gap: 14px;">
-                    {{-- Keyboard Shortcut Icon --}}
-                    <button type="button" title="Keyboard Shortcuts" style="background: none; border: none; cursor: pointer; color: #64748b; display: flex; align-items: center; justify-content: center; padding: 4px;">
-                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                            <rect x="3" y="4" width="18" height="16" rx="2" stroke-linecap="round" stroke-linejoin="round" />
-                            <path d="M7 8h.01M11 8h.01M15 8h.01M7 12h.01M11 12h.01M15 12h.01M17 12h.01M7 16h10" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                    </button>
-
                     <div class="dropdown" x-data="{ open: false }" style="position: relative;">
                         <button @click="open = !open" class="flex items-center" style="background: transparent; border: none; padding: 0; cursor: pointer; gap: 8px;">
                             <div style="width: 32px; height: 32px; background: #e0e7ff; color: #4338ca; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.875rem;">
@@ -173,7 +165,7 @@
             @php
                 $sidebarUserRole = Auth::user()->businesses()
                     ->where('business_id', $activeBusiness->id)
-                    ->value('role');
+                    ->value('business_user.role');
             @endphp
             <aside
                 class="app-sidebar"
@@ -229,6 +221,16 @@
                                    m0 0a5.002 5.002 0 019.288 0"/>
                         </svg>
                         <span>Team</span>
+                    </a>
+
+                    {{-- Admin Users Search & Cashbook Management --}}
+                    <a href="{{ route('admin.users.index') }}"
+                       class="cb-nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"/>
+                        </svg>
+                        <span>Users</span>
                     </a>
 
                     {{-- Business → BusinessController@index (businesses.index) --}}
@@ -297,6 +299,25 @@
                 </div>
 
             </aside>
+            @endif
+
+            <!-- Global Flash Toast Notifications -->
+            @if(session('success'))
+                <div id="flash-success-toast" style="position: fixed; top: 1.25rem; right: 1.25rem; z-index: 9999; display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.25rem; background: #10b981; color: white; border-radius: 8px; font-size: 0.875rem; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    <span>{{ session('success') }}</span>
+                    <button onclick="document.getElementById('flash-success-toast').remove()" style="background: none; border: none; color: white; cursor: pointer; margin-left: 0.5rem; font-size: 1.1rem; line-height: 1;">×</button>
+                </div>
+                <script>setTimeout(() => { const t = document.getElementById('flash-success-toast'); if(t) t.remove(); }, 4000);</script>
+            @endif
+
+            @if(session('error'))
+                <div id="flash-error-toast" style="position: fixed; top: 1.25rem; right: 1.25rem; z-index: 9999; display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.25rem; background: #ef4444; color: white; border-radius: 8px; font-size: 0.875rem; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    <span>{{ session('error') }}</span>
+                    <button onclick="document.getElementById('flash-error-toast').remove()" style="background: none; border: none; color: white; cursor: pointer; margin-left: 0.5rem; font-size: 1.1rem; line-height: 1;">×</button>
+                </div>
+                <script>setTimeout(() => { const t = document.getElementById('flash-error-toast'); if(t) t.remove(); }, 5000);</script>
             @endif
 
             <!-- Main content -->
