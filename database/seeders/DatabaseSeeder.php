@@ -15,7 +15,10 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Create or update the Primary Admin User
+        // 1. Delete all previous test users except the primary admin email
+        User::where('email', '!=', 'admin@cashbook.com')->delete();
+
+        // 2. Create or update the Primary Admin User
         $admin = User::updateOrCreate(
             ['email' => 'admin@cashbook.com'],
             [
@@ -26,7 +29,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // 2. Create the default Business
+        // 3. Create the default Business
         $business = Business::updateOrCreate(
             ['name' => 'CashBook Corporate'],
             [
@@ -39,7 +42,7 @@ class DatabaseSeeder extends Seeder
             $business->users()->attach($admin->id, ['role' => 'primary_admin']);
         }
 
-        // 3. Create the default Main Cashbook
+        // 4. Create the default Main Cashbook
         $book = Book::updateOrCreate(
             ['name' => 'Main Cashbook', 'business_id' => $business->id],
             [
