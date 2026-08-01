@@ -18,6 +18,7 @@
         <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
         <!-- Custom CSS & Vite -->
+        <link rel="stylesheet" href="/css/app.css">
         <link href="{{ asset('css/app.css') }}" rel="stylesheet">
         @vite(['resources/css/app.css', 'resources/js/app.js'])
 
