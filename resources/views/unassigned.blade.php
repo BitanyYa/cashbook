@@ -18,9 +18,14 @@
             </p>
 
             <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+                <a href="{{ route('businesses.create') }}"
+                   style="padding: 0.65rem 1.25rem; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; font-weight: 600; font-size: 0.875rem; cursor: pointer; font-family: inherit; text-decoration: none; display: inline-block;">
+                    ➕ Create New Business
+                </a>
+
                 <button type="button" onclick="window.location.href='/dashboard'"
-                        style="padding: 0.65rem 1.25rem; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; font-weight: 600; font-size: 0.875rem; cursor: pointer; font-family: inherit; transition: background 0.15s;"
-                        onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
+                        style="padding: 0.65rem 1.25rem; background: #ffffff; color: #334155; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 600; font-size: 0.875rem; cursor: pointer; font-family: inherit; transition: background 0.15s;"
+                        onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#ffffff'">
                     Refresh Status
                 </button>
 
