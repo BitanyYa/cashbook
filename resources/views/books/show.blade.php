@@ -216,7 +216,8 @@ $pillStyle = "display:inline-flex;align-items:center;padding:6px 28px 6px 12px;f
 <style>
 /* Show action icons on row hover */
 #transactions-table tbody tr:hover .txn-actions { opacity: 1 !important; }
-#transactions-table tbody tr { transition: background .1s; }
+#transactions-table tbody tr { transition: background .1s; cursor: pointer; }
+#transactions-table tbody tr:hover { background-color: #f8fafc !important; }
 .txn-actions-cell { white-space: nowrap; text-align: right; padding-right: 0.75rem !important; }
 </style>
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;font-size:0.875rem;color:var(--gray-600);flex-wrap:wrap;gap:0.5rem;">
@@ -1134,6 +1135,17 @@ $pillStyle = "display:inline-flex;align-items:center;padding:6px 28px 6px 12px;f
             $('#custom-next-btn').on('click', function() {
                 if (dataTable && dataTable.page.info().page < dataTable.page.info().pages - 1) {
                     dataTable.page('next').draw('page');
+                }
+            });
+
+            // Delegated click handler on table rows to open transaction detail modal reliably across all page draws
+            $(document).on('click', '#transactions-table tbody tr', function(e) {
+                if ($(e.target).closest('.txn-actions-cell, .txn-actions, button, a, input[type="checkbox"]').length) return;
+                if (dataTable) {
+                    const data = dataTable.row(this).data();
+                    if (data && data.id) {
+                        showTransactionDetail(data.id);
+                    }
                 }
             });
 

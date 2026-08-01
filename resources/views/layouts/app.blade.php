@@ -35,11 +35,16 @@
         <script src="https://cdn.datatables.net/fixedheader/3.4.0/js/dataTables.fixedHeader.min.js"></script>
 
         <style>
+            html, body {
+                overflow-x: hidden !important;
+                max-width: 100vw;
+            }
             body.app-layout {
                 display: flex;
                 flex-direction: column;
                 min-height: 100vh;
                 margin: 0;
+                overflow-x: hidden !important;
             }
             .app-main {
                 flex: 1 0 auto; /* grow and take available space */
