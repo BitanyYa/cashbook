@@ -11,15 +11,6 @@
             @endif
         </div>
 
-        <!-- Business Name -->
-        <div class="form-group">
-            <label for="business_name" class="form-label">{{ __('Business Name (Optional)') }}</label>
-            <input id="business_name" class="form-input" type="text" name="business_name" value="{{ old('business_name') }}" placeholder="e.g. My Business" />
-            @if($errors->get('business_name'))
-                <div class="form-error">{{ implode(', ', $errors->get('business_name')) }}</div>
-            @endif
-        </div>
-
         <!-- Email Address -->
         <div class="form-group">
             <label for="email" class="form-label">{{ __('Email') }}</label>
