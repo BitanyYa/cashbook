@@ -900,13 +900,17 @@ $pillStyle = "display:inline-flex;align-items:center;padding:6px 28px 6px 12px;f
             });
         }
 
-        // ── Contact autocomplete ──────────────────────────
-        function searchContacts(inputId, dropdownId) {
+        // ── Contact autocomplete & dropdown ──────────────────────────
+        function searchContacts(inputId, dropdownId, forceShow = false) {
             const input = document.getElementById(inputId);
             const dropdown = document.getElementById(dropdownId);
+            if (!input || !dropdown) return;
             const q = input.value.trim();
 
-            if (q.length === 0) { dropdown.style.display = 'none'; return; }
+            if (!forceShow && q.length === 0) {
+                dropdown.style.display = 'none';
+                return;
+            }
 
             fetch(`{{ route('transactions.contacts') }}?q=${encodeURIComponent(q)}`, {
                 headers: { 'X-CSRF-TOKEN': csrfToken, 'X-Requested-With': 'XMLHttpRequest' }
@@ -914,11 +918,18 @@ $pillStyle = "display:inline-flex;align-items:center;padding:6px 28px 6px 12px;f
             .then(r => r.json())
             .then(data => {
                 const contacts = data.contacts || [];
-                if (contacts.length === 0) { dropdown.style.display = 'none'; return; }
+                if (contacts.length === 0) {
+                    dropdown.innerHTML = `
+                        <div style="padding:.6rem .875rem;font-size:.78rem;color:var(--gray-400);font-style:italic;">
+                            No existing contacts found
+                        </div>`;
+                    dropdown.style.display = 'block';
+                    return;
+                }
 
                 dropdown.innerHTML = contacts.map(c => `
-                    <div onclick="pickContact('${inputId}','${dropdownId}','${c.replace(/'/g,"\\'")}')\"
-                         style="padding:.6rem .875rem;cursor:pointer;font-size:.875rem;color:var(--gray-800);
+                    <div onclick="pickContact('${inputId}','${dropdownId}','${c.replace(/'/g,"\\'")}')"
+                         style="padding:.6rem .875rem;cursor:pointer;font-size:.84rem;color:var(--gray-800);
                                 border-bottom:1px solid var(--gray-100);"
                          onmouseover="this.style.background='var(--gray-50)'"
                          onmouseout="this.style.background='#fff'">
@@ -1650,15 +1661,21 @@ $pillStyle = "display:inline-flex;align-items:center;padding:6px 28px 6px 12px;f
         }
 
         function toggleEditContactDropdown() {
-            const input = document.getElementById('edit_contact_name');
-            input.focus();
-            searchContacts('edit_contact_name', 'edit_contact_suggestions');
+            const dd = document.getElementById('edit_contact_suggestions');
+            if (dd && dd.style.display === 'block') {
+                dd.style.display = 'none';
+            } else {
+                searchContacts('edit_contact_name', 'edit_contact_suggestions', true);
+            }
         }
 
         function toggleAddContactDropdown() {
-            const input = document.getElementById('contact_name');
-            input.focus();
-            searchContacts('contact_name', 'contact_suggestions');
+            const dd = document.getElementById('contact_suggestions');
+            if (dd && dd.style.display === 'block') {
+                dd.style.display = 'none';
+            } else {
+                searchContacts('contact_name', 'contact_suggestions', true);
+            }
         }
 
         function toggleAddModeDropdown() {
