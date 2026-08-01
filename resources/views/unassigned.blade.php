@@ -13,27 +13,28 @@
                 Pending Cashbook Assignment
             </h2>
 
-            <p style="font-size: 0.9375rem; color: #475569; line-height: 1.6; margin: 0 0 2rem;">
-                You haven't been added to a cashbook yet. Please contact your administrator.
+            <p style="font-size: 0.9375rem; color: #475569; line-height: 1.6; margin: 0 0 1.5rem;">
+                You haven't been added to a business yet. You can create your own business to become Primary Admin, or wait for an administrator to invite you.
             </p>
 
-            <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; max-width: 320px; margin: 0 auto;">
                 <a href="{{ route('businesses.create') }}"
-                   style="padding: 0.65rem 1.25rem; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; font-weight: 600; font-size: 0.875rem; cursor: pointer; font-family: inherit; text-decoration: none; display: inline-block;">
-                    ➕ Create New Business
+                   style="padding: 0.75rem 1.25rem; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; font-weight: 600; font-size: 0.875rem; text-decoration: none; display: block; text-align: center; transition: background 0.15s;"
+                   onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
+                    ➕ Create Your Own Business
                 </a>
 
                 <button type="button" onclick="window.location.href='/dashboard'"
                         style="padding: 0.65rem 1.25rem; background: #ffffff; color: #334155; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 600; font-size: 0.875rem; cursor: pointer; font-family: inherit; transition: background 0.15s;"
                         onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#ffffff'">
-                    Refresh Status
+                    🔄 Refresh Assignment Status
                 </button>
 
-                <form method="POST" action="{{ route('logout') }}" style="display: inline;">
+                <form method="POST" action="{{ route('logout') }}" style="display: block; width: 100%;">
                     @csrf
                     <button type="submit" 
-                            style="padding: 0.65rem 1.25rem; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 600; font-size: 0.875rem; cursor: pointer; font-family: inherit; transition: background 0.15s;"
-                            onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
+                            style="width: 100%; padding: 0.65rem 1.25rem; background: transparent; color: #64748b; border: 1px solid #e2e8f0; border-radius: 8px; font-weight: 600; font-size: 0.875rem; cursor: pointer; font-family: inherit; transition: background 0.15s;"
+                            onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
                         Log Out
                     </button>
                 </form>

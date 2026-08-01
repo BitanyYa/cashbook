@@ -33,7 +33,7 @@ class SetActiveBusiness
             $request->attributes->set('activeBusiness', $activeBusiness);
 
             // If user has no active business and is accessing a business-dependent route
-            if (!$activeBusiness && !$request->routeIs('unassigned')) {
+            if (!$activeBusiness && !$request->routeIs('unassigned', 'businesses.create', 'businesses.store', 'logout')) {
                 if ($request->expectsJson() || $request->wantsJson() || $request->ajax()) {
                     return response()->json(['message' => 'User is not yet assigned to any cashbook.'], 403);
                 }
