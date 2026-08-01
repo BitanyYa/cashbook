@@ -378,15 +378,27 @@ $pillStyle = "display:inline-flex;align-items:center;padding:6px 28px 6px 12px;f
                     </div>
                 </div>
 
-                {{-- Contact Name with autocomplete --}}
+                {{-- Contact Name with dropdown and autocomplete --}}
                 <div class="form-group" style="margin-bottom:0;">
-                    <label for="contact_name" class="form-label">Contact Name</label>
+                    <label for="contact_name" class="form-label">Contact Name (Party)</label>
                     <div style="position:relative;">
-                        <input id="contact_name" name="contact_name" type="text"
-                               class="form-input"
-                               placeholder="Type to search or add a new contact…"
-                               autocomplete="off"
-                               oninput="searchContacts('contact_name','contact_suggestions')"/>
+                        <div style="display:flex;align-items:center;border:1px solid var(--gray-300);border-radius:6px;background:#fff;overflow:hidden;">
+                            <input id="contact_name" name="contact_name" type="text"
+                                   class="form-input"
+                                   style="border:none;outline:none;flex:1;"
+                                   placeholder="Select or type contact name..."
+                                   autocomplete="off"
+                                   oninput="searchContacts('contact_name','contact_suggestions')"/>
+                            <button type="button" onclick="document.getElementById('contact_name').value=''"
+                                    style="padding:0 .35rem;border:none;background:transparent;cursor:pointer;color:var(--gray-400);font-size:.85rem;line-height:1;">✕</button>
+                            <div style="width:1px;height:16px;background:var(--gray-200);"></div>
+                            <button type="button" onclick="toggleAddContactDropdown()"
+                                    style="padding:0 .45rem;border:none;background:transparent;cursor:pointer;color:var(--gray-500);">
+                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                        </div>
                         <div id="contact_suggestions"
                              style="display:none;position:absolute;top:100%;left:0;right:0;z-index:200;
                                     background:#fff;border:1px solid var(--gray-300);border-top:none;
@@ -394,12 +406,9 @@ $pillStyle = "display:inline-flex;align-items:center;padding:6px 28px 6px 12px;f
                                     box-shadow:0 4px 8px rgba(0,0,0,.08);">
                         </div>
                     </div>
-                    <p style="font-size:.75rem;color:var(--gray-400);margin-top:.25rem;">
-                        Pick an existing contact or type a new name.
-                    </p>
                 </div>
 
-                {{-- Row 2: Category + Mode --}}
+                {{-- Row 2: Category + New Category --}}
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:.875rem;">
                     <div class="form-group" style="margin-bottom:0;">
                         <label for="category_id" class="form-label">Category</label>
@@ -417,17 +426,65 @@ $pillStyle = "display:inline-flex;align-items:center;padding:6px 28px 6px 12px;f
                     </div>
                 </div>
 
-                {{-- Payment Mode --}}
+                {{-- Payment Mode (Cash, Bank, Online Selector) --}}
                 <div class="form-group" style="margin-bottom:0;">
-                    <label for="mode" class="form-label">Payment Mode</label>
-                    <input id="mode" name="mode" type="text" class="form-input" placeholder="e.g. Cash, Bank, UPI…" />
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.25rem;">
+                        <label for="add_mode_display" class="form-label" style="margin-bottom:0;">Payment Mode</label>
+                        <div style="display:flex;gap:.35rem;">
+                            <button type="button" onclick="selectAddMode('cash')"
+                                    style="padding:3px 10px;font-size:.75rem;font-weight:600;border-radius:4px;border:1px solid #cbd5e1;background:#f8fafc;color:#334155;cursor:pointer;transition:all .15s;"
+                                    onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f8fafc'">
+                                💵 Cash
+                            </button>
+                            <button type="button" onclick="selectAddMode('bank')"
+                                    style="padding:3px 10px;font-size:.75rem;font-weight:600;border-radius:4px;border:1px solid #cbd5e1;background:#f8fafc;color:#334155;cursor:pointer;transition:all .15s;"
+                                    onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f8fafc'">
+                                🏦 Bank
+                            </button>
+                        </div>
+                    </div>
+                    <div style="position:relative;">
+                        <div style="display:flex;align-items:center;border:1px solid var(--gray-300);border-radius:6px;background:#fff;overflow:hidden;">
+                            <input id="add_mode_display" type="text"
+                                   class="form-input"
+                                   style="border:none;outline:none;flex:1;"
+                                   placeholder="Select or type mode (Cash, Bank...)"
+                                   autocomplete="off"
+                                   value="Cash"
+                                   oninput="filterAddModes(this.value)" />
+                            <button type="button" onclick="document.getElementById('add_mode_display').value='';document.getElementById('mode').value=''"
+                                    style="padding:0 .35rem;border:none;background:transparent;cursor:pointer;color:var(--gray-400);font-size:.85rem;line-height:1;">✕</button>
+                            <div style="width:1px;height:16px;background:var(--gray-200);"></div>
+                            <button type="button" onclick="toggleAddModeDropdown()"
+                                    style="padding:0 .45rem;border:none;background:transparent;cursor:pointer;color:var(--gray-500);">
+                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <input type="hidden" id="mode" name="mode" value="cash">
+                        <div id="add_mode_dropdown"
+                             style="display:none;position:absolute;top:100%;left:0;right:0;z-index:200;
+                                    background:#fff;border:1px solid var(--gray-300);border-top:none;
+                                    border-radius:0 0 6px 6px;max-height:140px;overflow-y:auto;
+                                    box-shadow:0 4px 8px rgba(0,0,0,.08);">
+                            @foreach($modes as $m)
+                                <div onclick="selectAddMode('{{ $m }}')"
+                                     data-add-mode="{{ $m }}"
+                                     style="padding:.45rem .75rem;font-size:.8125rem;color:var(--gray-800);cursor:pointer;border-bottom:1px solid #f1f5f9;"
+                                     onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background='#fff'">
+                                    {{ ucfirst($m) }}
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
                 </div>
 
-                {{-- Description --}}
+                {{-- Remark / Description --}}
                 <div class="form-group" style="margin-bottom:0;">
-                    <label for="description" class="form-label">Description</label>
+                    <label for="description" class="form-label">Remark / Description</label>
                     <textarea id="description" name="description" rows="2"
-                              class="form-input" placeholder="Optional notes…"></textarea>
+                              class="form-input" placeholder="Add remarks, details, or notes..."></textarea>
                 </div>
 
                 {{-- Receipt --}}
@@ -1596,6 +1653,31 @@ $pillStyle = "display:inline-flex;align-items:center;padding:6px 28px 6px 12px;f
             const input = document.getElementById('edit_contact_name');
             input.focus();
             searchContacts('edit_contact_name', 'edit_contact_suggestions');
+        }
+
+        function toggleAddContactDropdown() {
+            const input = document.getElementById('contact_name');
+            input.focus();
+            searchContacts('contact_name', 'contact_suggestions');
+        }
+
+        function toggleAddModeDropdown() {
+            const dd = document.getElementById('add_mode_dropdown');
+            dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function filterAddModes(q) {
+            const items = document.querySelectorAll('#add_mode_dropdown [data-add-mode]');
+            items.forEach(item => {
+                item.style.display = item.dataset.addMode.toLowerCase().includes(q.toLowerCase()) ? 'block' : 'none';
+            });
+            document.getElementById('add_mode_dropdown').style.display = 'block';
+        }
+
+        function selectAddMode(mode) {
+            document.getElementById('mode').value = mode;
+            document.getElementById('add_mode_display').value = mode.charAt(0).toUpperCase() + mode.slice(1);
+            document.getElementById('add_mode_dropdown').style.display = 'none';
         }
 
         function toggleEditCategoryDropdown() {
