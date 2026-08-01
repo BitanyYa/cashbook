@@ -35,36 +35,35 @@
         <script src="https://cdn.datatables.net/fixedheader/3.4.0/js/dataTables.fixedHeader.min.js"></script>
 
         <style>
-            html {
-                scrollbar-gutter: stable;
-                overflow-y: scroll;
-                overflow-x: hidden !important;
-                max-width: 100vw;
-            }
-            body {
-                overflow-x: hidden !important;
-                max-width: 100vw;
+            html, body {
+                height: 100%;
+                margin: 0;
+                padding: 0;
+                overflow: hidden !important;
             }
             body.app-layout {
+                height: 100vh;
                 display: flex;
                 flex-direction: column;
-                min-height: 100vh;
-                margin: 0;
-                overflow-x: hidden !important;
+                overflow: hidden !important;
             }
             .app-main {
-                flex: 1 0 auto; /* grow and take available space */
-            }
-            .app-footer {
-                flex-shrink: 0;
-                background-color: var(--gray-100);
-                border-top: 1px solid var(--gray-300);
-                padding: 1rem 2rem;
-                font-size: 0.875rem;
-                color: var(--gray-600);
+                flex: 1;
                 display: flex;
-                justify-content: space-between;
-                align-items: center;
+                height: calc(100vh - 60px);
+                overflow: hidden !important;
+                min-width: 0;
+            }
+            .app-content {
+                flex: 1;
+                min-width: 0;
+                height: 100%;
+                overflow-y: auto;
+                overflow-x: auto;
+                padding: 2rem;
+                background: var(--gray-50);
+                display: flex;
+                flex-direction: column;
             }
         </style>
 
@@ -335,19 +334,19 @@
 
             <!-- Main content -->
             <main class="app-content">
-                {{ $slot }}
+                <div style="flex: 1;">
+                    {{ $slot }}
+                </div>
+                <!-- Footer -->
+                <footer class="app-footer"
+                    style="margin-top: 2rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem; padding: 1rem 0 0 0; border-top: 1px solid #e5e7eb; font-family: sans-serif;">
+                    <!-- Left Section -->
+                    <div class="footer-left" style="font-size: 0.75rem; color: #6b7280;">
+                        &copy; {{ date('Y') }} <strong style="color:#111827;">CashBook</strong>. All rights reserved.
+                    </div>
+                </footer>
             </main>
         </div>
-
-        <!-- Footer -->
-        <footer class="app-footer"
-            style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem; padding: 1rem; border-top: 1px solid #e5e7eb; background-color: #f9fafb; font-family: sans-serif;">
-
-            <!-- Left Section -->
-            <div class="footer-left" style="font-size: 0.75rem; color: #6b7280;">
-                &copy; {{ date('Y') }} <strong style="color:#111827;">CashBook</strong>. All rights reserved.
-            </div>
-        </footer>
 
         @stack('scripts')
         @livewireScripts
