@@ -70,6 +70,26 @@
     @endif
 </div>
 
+@if(session('import_summary'))
+    @php $sum = session('import_summary'); @endphp
+    <div style="background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1rem; color: #065f46;">
+        <h4 style="font-weight: 700; font-size: 0.9375rem; margin: 0 0 0.5rem; display: flex; align-items: center; gap: 6px;">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            CSV Import Summary Report
+        </h4>
+        <div style="font-size: 0.84rem; display: flex; gap: 1.5rem; flex-wrap: wrap;">
+            <span><strong>{{ $sum['imported'] }}</strong> Transactions Imported</span>
+            <span><strong>{{ $sum['duplicates'] }}</strong> Skipped Duplicates</span>
+            <span><strong>{{ $sum['new_categories'] }}</strong> New Categories Created</span>
+            @if(($sum['errors'] ?? 0) > 0)
+                <span style="color: #b91c1c;"><strong>{{ $sum['errors'] }}</strong> Invalid Rows Skipped</span>
+            @endif
+        </div>
+    </div>
+@endif
+
 {{-- ══ 2. FILTER PILLS ══ --}}
 @php
 $pillStyle = "display:inline-flex;align-items:center;padding:6px 28px 6px 12px;font-size:0.8125rem;font-weight:500;color:#334155;background:#fff;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-family:inherit;appearance:none;-webkit-appearance:none;background-image:url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e\");background-position:right 8px center;background-repeat:no-repeat;background-size:1.2rem;outline:none;";

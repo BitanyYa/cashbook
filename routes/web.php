@@ -68,9 +68,13 @@ Route::middleware('auth')->group(function () {
         Route::post('transactions/{transaction}/reject', [\App\Http\Controllers\TransactionController::class, 'reject'])->name('transactions.reject');
         Route::get('transactions/{transaction}/receipt', [\App\Http\Controllers\TransactionController::class, 'receipt'])->name('transactions.receipt');
 
-        // Transaction Import Routes
-        Route::get('/books/{book}/transactions/import', [TransactionImportController::class, 'create'])->name('transactions.import.create');
-        Route::post('/books/{book}/transactions/import', [TransactionImportController::class, 'store'])->name('transactions.import.store');
+        // Transaction Import Routes (Admin-Only)
+        Route::middleware('business.role:primary_admin,admin')->group(function() {
+            Route::get('/books/{book}/transactions/import', [TransactionImportController::class, 'create'])->name('transactions.import.create');
+            Route::post('/books/{book}/transactions/import/preview', [TransactionImportController::class, 'preview'])->name('transactions.import.preview');
+            Route::post('/books/{book}/transactions/import/store', [TransactionImportController::class, 'store'])->name('transactions.import.store');
+        });
+
         Route::get('/books/{book}/reports', [ReportController::class, 'index'])->name('reports.index');
         Route::post('/books/{book}/reports', [ReportController::class, 'generate'])->name('reports.generate');
         Route::get('/books/{book}/reports/download', [ReportController::class, 'download'])->name('reports.download');

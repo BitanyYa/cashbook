@@ -4,129 +4,271 @@ namespace App\Http\Controllers;
 
 use Carbon\Carbon;
 use App\Models\Book;
+use App\Models\User;
 use App\Models\Category;
 use App\Models\ActivityLog;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
-use Maatwebsite\Excel\Facades\Excel;
-use PhpOffice\PhpSpreadsheet\IOFactory;
-use Illuminate\Support\Facades\Validator;
-use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 class TransactionImportController extends Controller
 {
     /**
-     * Show the form for uploading a CSV file.
-     *
-     * @param  \App\Models\Book  $book
-     * @return \Illuminate\View\View
+     * Show the CSV upload form (Admin Only).
      */
     public function create(Book $book)
     {
-        $this->authorize('update', $book);
+        $this->authorizeAdmin($book);
         return view('transactions.import', compact('book'));
     }
 
     /**
-     * Handle the import of a CSV file.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Book  $book
-     * @return \Illuminate\Http\RedirectResponse
+     * Process uploaded CSV file and display interactive preview (Admin Only).
+     */
+    public function preview(Request $request, Book $book)
+    {
+        $this->authorizeAdmin($book);
+
+        $request->validate([
+            'csv_file' => 'required|file|mimes:csv,txt|max:5120',
+        ]);
+
+        $file = $request->file('csv_file');
+        $handle = fopen($file->getRealPath(), 'r');
+
+        if (!$handle) {
+            return redirect()->back()->with('error', 'Unable to open the uploaded CSV file.');
+        }
+
+        // Read header row
+        $header = fgetcsv($handle);
+        if (!$header) {
+            fclose($handle);
+            return redirect()->back()->with('error', 'The uploaded CSV file is empty.');
+        }
+
+        // Normalize header columns
+        $headerMap = [];
+        foreach ($header as $index => $col) {
+            $normalized = trim(strtolower(preg_replace('/[^a-zA-Z0-9 ]/', '', $col)));
+            $headerMap[$normalized] = $index;
+        }
+
+        // Check essential headers
+        if (!isset($headerMap['date']) || (!isset($headerMap['cash in']) && !isset($headerMap['cash out']))) {
+            fclose($handle);
+            return redirect()->back()->with('error', 'CSV header missing required columns: Date, Cash In / Cash Out.');
+        }
+
+        $existingCategories = Category::where('business_id', $book->business_id)
+            ->pluck('id', 'name')
+            ->toArray();
+
+        $allUsers = User::all();
+
+        $rows = [];
+        $rowIndex = 1;
+        $totalRows = 0;
+        $readyCount = 0;
+        $duplicateCount = 0;
+        $invalidCount = 0;
+        $newCategoriesToCreate = [];
+
+        while (($data = fgetcsv($handle)) !== false) {
+            $rowIndex++;
+            // Skip completely empty rows
+            if (empty(array_filter($data))) {
+                continue;
+            }
+
+            $totalRows++;
+
+            $rawDate = $data[$headerMap['date']] ?? null;
+            $rawTime = isset($headerMap['time']) ? ($data[$headerMap['time']] ?? '00:00') : '00:00';
+            $remark = isset($headerMap['remark']) ? trim($data[$headerMap['remark']]) : '';
+            $party = isset($headerMap['party']) ? trim($data[$headerMap['party']]) : null;
+            $categoryName = isset($headerMap['category']) ? trim($data[$headerMap['category']]) : null;
+            $mode = isset($headerMap['mode']) ? trim(strtolower($data[$headerMap['mode']])) : 'cash';
+            $entryBy = isset($headerMap['entry by']) ? trim($data[$headerMap['entry by']]) : null;
+
+            $cashIn = isset($headerMap['cash in']) ? $this->cleanAmount($data[$headerMap['cash in']]) : 0;
+            $cashOut = isset($headerMap['cash out']) ? $this->cleanAmount($data[$headerMap['cash out']]) : 0;
+
+            // Determine Type & Amount
+            $type = null;
+            $amount = 0;
+            if ($cashIn > 0) {
+                $type = 'income';
+                $amount = $cashIn;
+            } elseif ($cashOut > 0) {
+                $type = 'expense';
+                $amount = $cashOut;
+            }
+
+            // Parse Date & Time
+            $parsedDateTime = null;
+            $status = 'ready';
+            $errorMessage = null;
+
+            if (!$type || $amount <= 0) {
+                $status = 'invalid';
+                $errorMessage = 'Missing Cash In or Cash Out amount.';
+                $invalidCount++;
+            } else {
+                try {
+                    $dateTimeString = trim($rawDate . ' ' . $rawTime);
+                    $parsedDateTime = Carbon::parse($dateTimeString)->format('Y-m-d H:i:s');
+                } catch (\Exception $e) {
+                    $status = 'invalid';
+                    $errorMessage = 'Invalid Date/Time format: ' . $rawDate;
+                    $invalidCount++;
+                }
+            }
+
+            // Match Entry By User
+            $assignedUserId = Auth::id();
+            $assignedUserName = Auth::user()->name;
+            if (!empty($entryBy)) {
+                $matchedUser = $allUsers->first(function ($u) use ($entryBy) {
+                    return strcasecmp($u->name, $entryBy) === 0 || strcasecmp($u->email, $entryBy) === 0;
+                });
+                if ($matchedUser) {
+                    $assignedUserId = $matchedUser->id;
+                    $assignedUserName = $matchedUser->name;
+                }
+            }
+
+            // Category check
+            $isNewCategory = false;
+            if (!empty($categoryName) && !isset($existingCategories[$categoryName])) {
+                $isNewCategory = true;
+                if (!in_array($categoryName, $newCategoriesToCreate)) {
+                    $newCategoriesToCreate[] = $categoryName;
+                }
+            }
+
+            // Duplicate Detection
+            $isDuplicate = false;
+            if ($status === 'ready' && $parsedDateTime) {
+                $isDuplicate = Transaction::where('book_id', $book->id)
+                    ->where('transaction_date', $parsedDateTime)
+                    ->where('amount', $amount)
+                    ->where('type', $type)
+                    ->where('description', $remark)
+                    ->exists();
+
+                if ($isDuplicate) {
+                    $status = 'duplicate';
+                    $duplicateCount++;
+                } else {
+                    $readyCount++;
+                }
+            }
+
+            $rows[] = [
+                'row_index' => $rowIndex,
+                'raw_date' => $rawDate,
+                'raw_time' => $rawTime,
+                'transaction_date' => $parsedDateTime,
+                'type' => $type,
+                'amount' => $amount,
+                'remark' => $remark,
+                'party' => $party,
+                'category' => $categoryName,
+                'is_new_category' => $isNewCategory,
+                'mode' => !empty($mode) ? $mode : 'cash',
+                'entry_by' => $entryBy,
+                'user_id' => $assignedUserId,
+                'user_name' => $assignedUserName,
+                'status' => $status,
+                'error_message' => $errorMessage,
+            ];
+        }
+
+        fclose($handle);
+
+        session(['import_rows_' . $book->id => $rows]);
+
+        $summary = [
+            'total' => $totalRows,
+            'ready' => $readyCount,
+            'duplicates' => $duplicateCount,
+            'invalid' => $invalidCount,
+            'new_categories' => count($newCategoriesToCreate),
+            'new_category_names' => $newCategoriesToCreate,
+        ];
+
+        return view('transactions.preview', compact('book', 'rows', 'summary'));
+    }
+
+    /**
+     * Store previewed transactions into database inside a DB transaction (Admin Only).
      */
     public function store(Request $request, Book $book)
     {
-        try {
-            $this->authorize('update', $book);
+        $this->authorizeAdmin($book);
 
-            $request->validate([
-                'csv_file' => 'required|file|mimes:csv,txt,xls,xlsx|max:2048',
-            ]);
+        $sessionKey = 'import_rows_' . $book->id;
+        $rows = session($sessionKey);
 
-            // Load file via PhpSpreadsheet
-            $spreadsheet = IOFactory::load($request->file('csv_file')->getRealPath());
-            $sheet = $spreadsheet->getActiveSheet();
-            $rows = $sheet->toArray(null, true, true, true);
+        if (!$rows || empty($rows)) {
+            return redirect()->route('transactions.import.create', $book)
+                ->with('error', 'Import session expired. Please upload your CSV file again.');
+        }
 
-            // First row is header
-            $header = array_map('trim', $rows[1]);
-            unset($rows[1]);
+        $importedCount = 0;
+        $skippedDuplicates = 0;
+        $newCategoriesCount = 0;
+        $errorCount = 0;
+        $createdCategoryMap = [];
 
-            $successCount = 0;
-            $errorCount = 0;
-            $errorLog = [];
-
-            foreach ($rows as $rowIndex => $row) {
-                // Map header to row values
-                $data = [];
-                foreach ($header as $key => $colName) {
-                    $data[$colName] = isset($row[$key]) ? trim((string) $row[$key]) : null;
-                }
-
-                // --- Handle Date ---
-                try {
-                    if (is_numeric($data['Date'])) {
-                        // Excel serial date
-                        $data['Date'] = Carbon::instance(ExcelDate::excelToDateTimeObject($data['Date']))->format('Y-m-d');
-                    } else {
-                        $data['Date'] = Carbon::parse($data['Date'])->format('Y-m-d');
-                    }
-                } catch (\Exception $e) {
-                    $errorCount++;
-                    $errorLog[] = "Row {$rowIndex}: Invalid Date - '{$data['Date']}'";
+        DB::transaction(function () use ($book, $rows, &$importedCount, &$skippedDuplicates, &$newCategoriesCount, &$errorCount, &$createdCategoryMap) {
+            foreach ($rows as $row) {
+                if ($row['status'] === 'duplicate') {
+                    $skippedDuplicates++;
                     continue;
                 }
 
-                // --- Handle Time ---
-                try {
-                    if (!empty($data['Time'])) {
-                        if (is_numeric($data['Time'])) {
-                            $data['Time'] = Carbon::instance(ExcelDate::excelToDateTimeObject($data['Time']))->format('h:i A');
-                        } else {
-                            $data['Time'] = Carbon::parse($data['Time'])->format('h:i A');
+                if ($row['status'] === 'invalid') {
+                    $errorCount++;
+                    continue;
+                }
+
+                // Handle Category Creation
+                $categoryId = null;
+                if (!empty($row['category'])) {
+                    $categoryName = $row['category'];
+                    if (!isset($createdCategoryMap[$categoryName])) {
+                        $cat = Category::firstOrCreate(
+                            ['name' => $categoryName, 'business_id' => $book->business_id],
+                            ['type' => $row['type']]
+                        );
+                        if ($cat->wasRecentlyCreated) {
+                            $newCategoriesCount++;
                         }
-                    } else {
-                        $data['Time'] = '12:00 AM'; // default if missing
+                        $createdCategoryMap[$categoryName] = $cat->id;
                     }
-                } catch (\Exception $e) {
-                    $errorCount++;
-                    $errorLog[] = "Row {$rowIndex}: Invalid Time - '{$data['Time']}'";
-                    continue;
+                    $categoryId = $createdCategoryMap[$categoryName];
                 }
 
-                // --- Validate amount ---
-                if (empty($data['Cash In']) && empty($data['Cash Out'])) {
-                    $errorCount++;
-                    $errorLog[] = "Row {$rowIndex}: No Cash In or Cash Out value";
-                    continue;
-                }
-
-                // --- Category ---
-                $category = null;
-                if (!empty($data['Category'])) {
-                    $category = Category::firstOrCreate(
-                        ['name' => $data['Category'], 'business_id' => $book->business_id],
-                        ['type' => !empty($data['Cash In']) ? 'income' : 'expense']
-                    );
-                }
-
-                // --- Create Transaction ---
+                // Create Transaction
                 $transaction = Transaction::create([
                     'business_id' => $book->business_id,
                     'book_id' => $book->id,
-                    'user_id' => Auth::id(),
-                    'transaction_date' => Carbon::parse($data['Date'] . ' ' . $data['Time']),
-                    'type' => !empty($data['Cash In']) ? 'income' : 'expense',
+                    'user_id' => $row['user_id'] ?: Auth::id(),
+                    'transaction_date' => $row['transaction_date'],
+                    'type' => $row['type'],
                     'status' => 'approved',
-                    'amount' => !empty($data['Cash In']) ? $data['Cash In'] : $data['Cash Out'],
-                    'description' => $data['Remark'],
-                    'category_id' => $category ? $category->id : null,
-                    'mode' => strtolower($data['Mode']),
+                    'amount' => $row['amount'],
+                    'description' => $row['remark'],
+                    'contact_name' => $row['party'],
+                    'category_id' => $categoryId,
+                    'mode' => strtolower($row['mode'] ?: 'cash'),
                 ]);
 
-                // --- Log Activity ---
+                // Log Activity
                 ActivityLog::create([
                     'action' => 'transaction.imported',
                     'user_id' => Auth::id(),
@@ -135,34 +277,60 @@ class TransactionImportController extends Controller
                     'subject_id' => $transaction->id,
                     'details' => [
                         'amount' => $transaction->amount,
-                        'type' => !empty($data['Cash In']) ? 'income' : 'expense'
+                        'type' => $row['type'],
+                        'book' => $book->name,
                     ],
                 ]);
 
-                $successCount++;
+                $importedCount++;
             }
 
-            $notification = [
-                'message' => "Imported {$successCount} transactions. Skipped {$errorCount} rows.",
-                'alert-type' => $errorCount > 0 ? 'warning' : 'success'
-            ];
-
-            if ($errorCount > 0) {
-                // You can log this somewhere else instead of dd()
-                Log::warning('Transaction Import Skipped Rows', $errorLog);
-            }
-
-            // update book updated_at timestamp
             $book->touch();
+        });
 
-            return redirect()->route('books.show', $book)->with($notification);
+        // Clear session key
+        session()->forget($sessionKey);
 
-        } catch (\Exception $e) {
-            return redirect()->back()->with([
-                'message' => 'An error occurred while importing transactions: ' . $e->getMessage(),
-                'alert-type' => 'error'
-            ]);
-        }
+        $notification = [
+            'imported' => $importedCount,
+            'duplicates' => $skippedDuplicates,
+            'new_categories' => $newCategoriesCount,
+            'errors' => $errorCount,
+        ];
+
+        session()->flash('import_summary', $notification);
+
+        return redirect()->route('books.show', $book)->with('success', "Import complete: {$importedCount} imported, {$skippedDuplicates} skipped duplicates.");
     }
 
+    /**
+     * Clean numeric currency values.
+     */
+    private function cleanAmount($val)
+    {
+        if (empty($val)) return 0;
+        $cleaned = preg_replace('/[^\d.]/', '', (string)$val);
+        return is_numeric($cleaned) ? (float)$cleaned : 0;
+    }
+
+    /**
+     * Authorize Admin-only access for imports.
+     */
+    private function authorizeAdmin(Book $book)
+    {
+        $user = Auth::user();
+        $this->authorize('update', $book);
+
+        // Check if user is primary_admin or admin in business
+        $businessUser = DB::table('business_user')
+            ->where('business_id', $book->business_id)
+            ->where('user_id', $user->id)
+            ->first();
+
+        $role = $businessUser->role ?? $user->role;
+
+        if (!in_array($role, ['primary_admin', 'admin'])) {
+            abort(403, 'Unauthorized. CSV import is restricted to Primary Admins and Admins.');
+        }
+    }
 }
