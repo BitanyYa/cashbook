@@ -37,34 +37,42 @@ class TransactionImportController extends Controller
             ]);
 
             $file = $request->file('csv_file');
-            $extension = strtolower($file->getClientOriginalExtension());
-            if (!in_array($extension, ['csv', 'txt'])) {
-                return redirect()->back()->with('error', 'Please upload a valid CSV file (.csv or .txt).');
+            $allRows = $this->readCsvRows($file->getRealPath());
+
+            if (empty($allRows)) {
+                return redirect()->back()->with('error', 'The uploaded CSV file is empty or unreadable.');
             }
 
-            $handle = fopen($file->getRealPath(), 'r');
-            if (!$handle) {
-                return redirect()->back()->with('error', 'Unable to open the uploaded CSV file.');
-            }
-
-            // Read header row
-            $header = fgetcsv($handle);
-            if (!$header) {
-                fclose($handle);
-                return redirect()->back()->with('error', 'The uploaded CSV file is empty.');
-            }
-
-            // Normalize header columns
+            // Extract header row
+            $rawHeader = array_shift($allRows);
             $headerMap = [];
-            foreach ($header as $index => $col) {
-                $normalized = trim(strtolower(preg_replace('/[^a-zA-Z0-9 ]/', '', $col)));
+            foreach ($rawHeader as $index => $col) {
+                $normalized = trim(strtolower(preg_replace('/[^a-zA-Z0-9_ ]/', '', $col)));
                 $headerMap[$normalized] = $index;
             }
 
-            // Check essential headers
-            if (!isset($headerMap['date']) || (!isset($headerMap['cash in']) && !isset($headerMap['cash out']))) {
-                fclose($handle);
-                return redirect()->back()->with('error', 'CSV header missing required columns: Date, Cash In / Cash Out.');
+            // Flexible column resolution helper
+            $findCol = function (array $candidates) use ($headerMap) {
+                foreach ($candidates as $candidate) {
+                    if (isset($headerMap[$candidate])) {
+                        return $headerMap[$candidate];
+                    }
+                }
+                return null;
+            };
+
+            $dateCol = $findCol(['date', 'transaction date', 'entry date']);
+            $timeCol = $findCol(['time', 'transaction time']);
+            $remarkCol = $findCol(['remark', 'remarks', 'description', 'note', 'details']);
+            $partyCol = $findCol(['party', 'contact', 'name', 'customer', 'vendor']);
+            $categoryCol = $findCol(['category', 'type']);
+            $modeCol = $findCol(['mode', 'payment mode', 'payment method']);
+            $entryByCol = $findCol(['entry by', 'created by', 'user', 'entryby']);
+            $cashInCol = $findCol(['cash in', 'cashin', 'in', 'income', 'credit', 'amount in', 'cash_in']);
+            $cashOutCol = $findCol(['cash out', 'cashout', 'out', 'expense', 'debit', 'amount out', 'cash_out']);
+
+            if ($dateCol === null || ($cashInCol === null && $cashOutCol === null)) {
+                return redirect()->back()->with('error', 'CSV missing required headers. Found headers: "' . implode(', ', $rawHeader) . '". Required: Date, Cash In / Cash Out.');
             }
 
             $existingCategories = Category::where('business_id', $book->business_id)
@@ -81,25 +89,25 @@ class TransactionImportController extends Controller
             $invalidCount = 0;
             $newCategoriesToCreate = [];
 
-            while (($data = fgetcsv($handle)) !== false) {
+            foreach ($allRows as $data) {
                 $rowIndex++;
-                // Skip completely empty rows
-                if (empty(array_filter($data))) {
+                // Skip empty lines
+                if (empty(array_filter($data, 'strlen'))) {
                     continue;
                 }
 
                 $totalRows++;
 
-                $rawDate = $data[$headerMap['date']] ?? null;
-                $rawTime = isset($headerMap['time']) ? ($data[$headerMap['time']] ?? '00:00') : '00:00';
-                $remark = isset($headerMap['remark']) ? trim($data[$headerMap['remark']]) : '';
-                $party = isset($headerMap['party']) ? trim($data[$headerMap['party']]) : null;
-                $categoryName = isset($headerMap['category']) ? trim($data[$headerMap['category']]) : null;
-                $mode = isset($headerMap['mode']) ? trim(strtolower($data[$headerMap['mode']])) : 'cash';
-                $entryBy = isset($headerMap['entry by']) ? trim($data[$headerMap['entry by']]) : null;
+                $rawDate = $data[$dateCol] ?? null;
+                $rawTime = $timeCol !== null ? ($data[$timeCol] ?? '') : '';
+                $remark = $remarkCol !== null ? trim($data[$remarkCol] ?? '') : '';
+                $party = $partyCol !== null ? trim($data[$partyCol] ?? '') : null;
+                $categoryName = $categoryCol !== null ? trim($data[$categoryCol] ?? '') : null;
+                $mode = $modeCol !== null ? trim(strtolower($data[$modeCol] ?? 'cash')) : 'cash';
+                $entryBy = $entryByCol !== null ? trim($data[$entryByCol] ?? '') : null;
 
-                $cashIn = isset($headerMap['cash in']) ? $this->cleanAmount($data[$headerMap['cash in']]) : 0;
-                $cashOut = isset($headerMap['cash out']) ? $this->cleanAmount($data[$headerMap['cash out']]) : 0;
+                $cashIn = $cashInCol !== null ? $this->cleanAmount($data[$cashInCol] ?? 0) : 0;
+                $cashOut = $cashOutCol !== null ? $this->cleanAmount($data[$cashOutCol] ?? 0) : 0;
 
                 // Determine Type & Amount
                 $type = null;
@@ -113,7 +121,7 @@ class TransactionImportController extends Controller
                 }
 
                 // Parse Date & Time
-                $parsedDateTime = null;
+                $parsedDateTime = $this->parseDateTime($rawDate, $rawTime);
                 $status = 'ready';
                 $errorMessage = null;
 
@@ -121,15 +129,10 @@ class TransactionImportController extends Controller
                     $status = 'invalid';
                     $errorMessage = 'Missing Cash In or Cash Out amount.';
                     $invalidCount++;
-                } else {
-                    try {
-                        $dateTimeString = trim($rawDate . ' ' . $rawTime);
-                        $parsedDateTime = Carbon::parse($dateTimeString)->format('Y-m-d H:i:s');
-                    } catch (\Exception $e) {
-                        $status = 'invalid';
-                        $errorMessage = 'Invalid Date/Time format: ' . $rawDate;
-                        $invalidCount++;
-                    }
+                } elseif (!$parsedDateTime) {
+                    $status = 'invalid';
+                    $errorMessage = 'Invalid Date/Time: "' . $rawDate . ' ' . $rawTime . '"';
+                    $invalidCount++;
                 }
 
                 // Match Entry By User
@@ -192,8 +195,6 @@ class TransactionImportController extends Controller
                 ];
             }
 
-            fclose($handle);
-
             session(['import_rows_' . $book->id => $rows]);
 
             $summary = [
@@ -208,7 +209,7 @@ class TransactionImportController extends Controller
             return view('transactions.preview', compact('book', 'rows', 'summary'));
 
         } catch (\Throwable $e) {
-            Log::error('CSV Preview Error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            Log::error('CSV Preview Exception: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return redirect()->back()->with('error', 'Error parsing CSV file: ' . $e->getMessage());
         }
     }
@@ -314,18 +315,111 @@ class TransactionImportController extends Controller
             return redirect()->route('books.show', $book)->with('success', "Import complete: {$importedCount} imported, {$skippedDuplicates} skipped duplicates.");
 
         } catch (\Throwable $e) {
-            Log::error('CSV Store Error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            Log::error('CSV Store Exception: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return redirect()->back()->with('error', 'Error storing CSV transactions: ' . $e->getMessage());
         }
     }
 
     /**
-     * Clean numeric currency values.
+     * Read CSV rows safely supporting UTF-8 BOM, auto-delimiters (comma, semicolon, tab, pipe).
+     */
+    private function readCsvRows($filePath)
+    {
+        $content = file_get_contents($filePath);
+        if (!$content) return [];
+
+        // Remove UTF-8 BOM
+        $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+
+        // Auto-detect delimiter
+        $firstLine = strtok($content, "\r\n");
+        $delimiters = [',' => 0, ';' => 0, "\t" => 0, '|' => 0];
+        foreach ($delimiters as $d => $count) {
+            $delimiters[$d] = substr_count($firstLine, $d);
+        }
+        arsort($delimiters);
+        $delimiter = key($delimiters);
+        if ($delimiters[$delimiter] === 0) {
+            $delimiter = ',';
+        }
+
+        // Split by lines and parse
+        $lines = explode("\n", str_replace(["\r\n", "\r"], "\n", $content));
+        $rows = [];
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '') continue;
+            $rows[] = str_getcsv($line, $delimiter);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Parse raw date and time strings with fallback format matching.
+     */
+    private function parseDateTime($rawDate, $rawTime)
+    {
+        if (empty($rawDate)) return null;
+
+        $rawDate = trim((string)$rawDate);
+        $rawTime = trim((string)$rawTime);
+
+        // Handle Excel numeric serial date (e.g. 45504)
+        if (is_numeric($rawDate) && (float)$rawDate > 30000 && (float)$rawDate < 60000) {
+            try {
+                $dateObj = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($rawDate);
+                $rawDate = $dateObj->format('Y-m-d');
+            } catch (\Exception $e) {}
+        }
+
+        $dateStr = $rawDate;
+        if (!empty($rawTime)) {
+            $dateStr .= ' ' . $rawTime;
+        }
+
+        try {
+            return Carbon::parse($dateStr)->format('Y-m-d H:i:s');
+        } catch (\Exception $e) {
+            $formats = [
+                'Y-m-d H:i:s', 'Y-m-d H:i', 'Y-m-d',
+                'd/m/Y H:i:s', 'd/m/Y H:i', 'd/m/Y',
+                'm/d/Y H:i:s', 'm/d/Y H:i', 'm/d/Y',
+                'd-m-Y H:i:s', 'd-m-Y H:i', 'd-m-Y',
+                'd.m.Y H:i:s', 'd.m.Y H:i', 'd.m.Y'
+            ];
+            foreach ($formats as $fmt) {
+                try {
+                    return Carbon::createFromFormat($fmt, $dateStr)->format('Y-m-d H:i:s');
+                } catch (\Exception $ex) {
+                    continue;
+                }
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Clean numeric currency values safely.
      */
     private function cleanAmount($val)
     {
         if (empty($val)) return 0;
-        $cleaned = preg_replace('/[^\d.]/', '', (string)$val);
+        $val = trim((string)$val);
+
+        // If string contains both comma and dot, e.g. 1,500.00
+        if (strpos($val, '.') !== false && strpos($val, ',') !== false) {
+            $val = str_replace(',', '', $val);
+        } elseif (strpos($val, ',') !== false && strpos($val, '.') === false) {
+            // European format e.g. 1500,00 -> change comma to dot
+            if (strlen(substr(strrchr($val, ","), 1)) == 2) {
+                $val = str_replace(',', '.', $val);
+            } else {
+                $val = str_replace(',', '', $val);
+            }
+        }
+
+        $cleaned = preg_replace('/[^\d.]/', '', $val);
         return is_numeric($cleaned) ? (float)$cleaned : 0;
     }
 
@@ -335,11 +429,9 @@ class TransactionImportController extends Controller
     private function authorizeAdmin(Book $book)
     {
         $user = Auth::user();
-        
         $role = $user->getBookRole($book);
 
         if (!in_array($role, ['primary_admin', 'admin'])) {
-            // Also check business role
             $businessUser = DB::table('business_user')
                 ->where('business_id', $book->business_id)
                 ->where('user_id', $user->id)
