@@ -98,13 +98,14 @@ body {
 
 .app-sidebar {
     flex-shrink: 0;
-    width: 260px; /* adjust as needed */
-    height: 100vh;
-    overflow-y: auto; /* sidebar scroll if content is too tall */
+    width: 260px;
+    height: calc(100vh - 60px);
     position: sticky;
-    top: 0;
+    top: 60px;
+    overflow-y: auto;
     background: white;
     border-right: 1px solid var(--gray-200);
+    z-index: 40;
 }
 
 .app-main {

@@ -35,7 +35,13 @@
         <script src="https://cdn.datatables.net/fixedheader/3.4.0/js/dataTables.fixedHeader.min.js"></script>
 
         <style>
-            html, body {
+            html {
+                scrollbar-gutter: stable;
+                overflow-y: scroll;
+                overflow-x: hidden !important;
+                max-width: 100vw;
+            }
+            body {
                 overflow-x: hidden !important;
                 max-width: 100vw;
             }
