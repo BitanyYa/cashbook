@@ -8,7 +8,7 @@
 [![GitHub Forks](https://img.shields.io/github/forks/Riaz-Mahmud/cashbook)](https://github.com/Riaz-Mahmud/cashbook/network/members)
 [![Issues](https://img.shields.io/github/issues/Riaz-Mahmud/cashbook)](https://github.com/Riaz-Mahmud/cashbook/issues)
 
-**CashBook** is a free, open-source cash management web application for individuals and small businesses. Track cash flow, manage multiple businesses, categorize transactions, and generate insightful financial reports—completely free.
+**CashBook** is a free, open-source cash management web application for individuals and small businesses. Track cash flow, manage multiple businesses, categorize transactions, and generate insightful financial reports completely free.
 
 ---
 
