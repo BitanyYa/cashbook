@@ -107,8 +107,17 @@ body {
     border-right: 1px solid var(--gray-200);
 }
 
+.app-main {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    overflow-x: hidden;
+}
+
 .app-content {
     flex: 1;
+    min-width: 0;
+    overflow-x: auto;
     padding: 2rem;
     background: var(--gray-50);
 }
