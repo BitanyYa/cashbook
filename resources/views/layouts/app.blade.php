@@ -310,6 +310,11 @@
                     </a>
                 </div>
 
+                {{-- Sidebar Footer --}}
+                <div class="sidebar-footer" style="padding: 1.25rem 1rem; border-top: 1px solid var(--gray-200); font-size: 0.75rem; color: #64748b; background: #ffffff; margin-top: auto;">
+                    &copy; {{ date('Y') }} <strong style="color: #0f172a;">CashBook</strong>. All rights reserved.
+                </div>
+
             </aside>
             @endif
 
@@ -337,14 +342,6 @@
                 <div style="flex: 1;">
                     {{ $slot }}
                 </div>
-                <!-- Footer -->
-                <footer class="app-footer"
-                    style="margin-top: 2rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem; padding: 1rem 0 0 0; border-top: 1px solid #e5e7eb; font-family: sans-serif;">
-                    <!-- Left Section -->
-                    <div class="footer-left" style="font-size: 0.75rem; color: #6b7280;">
-                        &copy; {{ date('Y') }} <strong style="color:#111827;">CashBook</strong>. All rights reserved.
-                    </div>
-                </footer>
             </main>
         </div>
 

@@ -1353,17 +1353,60 @@ body {
     cursor: not-allowed;
 }
 
-/* Previous/Next Button Icons */
-.dataTables_wrapper .dataTables_paginate .paginate_button.previous:before {
-    content: '‹';
-    margin-right: 0.25rem;
-    font-weight: 700;
+/* Standard Laravel & Custom Pagination Styling */
+.pagination,
+ul.pagination,
+nav[role="navigation"] {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    list-style: none;
+    padding: 0;
+    margin: 1.5rem 0 0 0;
 }
 
-.dataTables_wrapper .dataTables_paginate .paginate_button.next:after {
-    content: '›';
-    margin-left: 0.25rem;
-    font-weight: 700;
+.pagination li,
+ul.pagination li {
+    display: inline-flex;
+    margin: 0 0.25rem;
+}
+
+.pagination a,
+.pagination span,
+ul.pagination li a,
+ul.pagination li span,
+.pagination .page-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #2563eb;
+    margin: 0 0.25rem;
+}
+
+.pagination a:hover,
+ul.pagination li a:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+}
+
+.pagination .disabled,
+.pagination li.disabled span,
+.pagination li.disabled a,
+.pagination span[aria-disabled="true"] {
+    background: #f8fafc;
+    color: #94a3b8;
+    border-color: #e2e8f0;
+    cursor: not-allowed;
+    opacity: 0.6;
 }
 
 /* Bottom Controls Layout */
