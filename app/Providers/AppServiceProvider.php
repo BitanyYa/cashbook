@@ -42,6 +42,10 @@ class AppServiceProvider extends ServiceProvider
 
         Transaction::observe(TransactionObserver::class);
 
+        // Enforce custom styled pagination with explicit spacing across all pages
+        \Illuminate\Pagination\Paginator::defaultView('vendor.pagination.custom');
+        \Illuminate\Pagination\Paginator::defaultSimpleView('vendor.pagination.custom');
+
         View::composer('*', function ($view) {
             $active = null;
             if (Auth::check()) {
