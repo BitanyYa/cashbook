@@ -18,9 +18,7 @@
         <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
         <!-- Custom CSS & Vite -->
-        <link rel="stylesheet" href="/css/app.css">
-        <link href="{{ asset('css/app.css') }}" rel="stylesheet">
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
+        <link rel="stylesheet" href="{{ asset('css/app.css') }}">
 
         <!-- DataTables CSS -->
         <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
@@ -51,7 +49,7 @@
                 flex: 1;
                 display: flex;
                 height: calc(100vh - 60px);
-                overflow: hidden !important;
+                overflow: visible !important;
                 min-width: 0;
             }
             .app-content {
@@ -59,11 +57,55 @@
                 min-width: 0;
                 height: 100%;
                 overflow-y: auto;
-                overflow-x: auto;
+                overflow-x: hidden;
                 padding: 2rem;
                 background: var(--gray-50);
                 display: flex;
                 flex-direction: column;
+            }
+
+            /* ── Mobile layout ─────────────────────────── */
+            @media (max-width: 767px) {
+                /* hide sidebar completely on mobile */
+                .app-sidebar { display: none !important; }
+
+                /* content fills full width, reduce padding */
+                .app-content {
+                    padding: 0 !important;
+                    overflow-x: hidden;
+                }
+
+                /* shrink topbar on mobile */
+                .app-header { padding: 0 0.75rem; }
+                .header-content { gap: 0.5rem; }
+
+                /* hide logo text, keep icon */
+                .app-logo-text { display: none; }
+
+                /* truncate business name in selector */
+                .header-content .btn span {
+                    max-width: 120px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    display: inline-block;
+                    vertical-align: middle;
+                }
+
+                /* safe area bottom padding for fixed bars */
+                .mobile-bottom-bar {
+                    padding-bottom: calc(0.875rem + env(safe-area-inset-bottom));
+                }
+            }
+
+            /* ── Desktop: restore sidebar ──────────────── */
+            @media (min-width: 768px) {
+                .mobile-only { display: none !important; }
+                .desktop-only { display: flex !important; }
+            }
+            @media (max-width: 767px) {
+                .desktop-only { display: none !important; }
+                .mobile-only  { display: flex !important; }
             }
         </style>
 
@@ -84,46 +126,49 @@
                 <!-- Center: Business Selector -->
                 <div class="flex items-center">
                     @if($activeBusiness ?? null)
-                        <div class="dropdown" x-data="{ open: false }">
-                            <button @click="open = !open" class="btn btn-secondary" style="display: flex; align-items: center; padding: 0.5rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; font-size: 0.875rem; color: #334155; font-weight: 500; gap: 8px; cursor: pointer;">
-                                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" style="color: #64748b;">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21h10.5V3.75c0-.621-.504-1.125-1.125-1.125H7.875c-.621 0-1.125.504-1.125 1.125V21z" />
+                        <details class="biz-switcher" onclick="this.open && event.stopPropagation()">
+                            <summary style="display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;font-size:.875rem;color:#334155;font-weight:500;cursor:pointer;list-style:none;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;">
+                                <svg width="14" height="14" fill="none" stroke="#64748b" stroke-width="1.8" viewBox="0 0 24 24" style="flex-shrink:0;">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21h10.5V3.75c0-.621-.504-1.125-1.125-1.125H7.875c-.621 0-1.125.504-1.125 1.125V21z"/>
                                 </svg>
-                                <span>{{ $activeBusiness->name }}</span>
-                                <svg style="width: 14px; height: 14px; color: #64748b;" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                <span style="overflow:hidden;text-overflow:ellipsis;">{{ $activeBusiness->name }}</span>
+                                <svg width="12" height="12" fill="#64748b" viewBox="0 0 20 20" style="flex-shrink:0;">
+                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
                                 </svg>
-                            </button>
-                            <div x-show="open" x-cloak @click.away="open = false" x-transition class="dropdown-menu slide-down" style="min-width: 250px; left: 50%; transform: translateX(-50%);">
-
+                            </summary>
+                            <div style="position:absolute;top:calc(100% + 4px);left:50%;transform:translateX(-50%);width:260px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:99999;overflow:hidden;">
                                 @foreach(Auth::user()->businesses as $business)
-                                    <form method="POST" action="{{ route('business.switch', $business) }}">
-                                        @csrf
-                                        <button type="submit" class="dropdown-item {{ $business->id === $activeBusiness->id ? 'bg-gray-50' : '' }}" style="width: 100%; text-align: left; padding: 0.5rem 1rem; border: none; background: transparent; cursor: pointer; font-family: inherit;">
-                                            <div style="display: flex; align-items: center;">
-                                                <div style="width: 8px; height: 8px; background: {{ $business->id === $activeBusiness->id ? 'var(--primary-color)' : 'var(--gray-400)' }}; border-radius: 50%; margin-right: 12px;"></div>
-                                                <div>
-                                                    <div style="font-weight: 600;">{{ $business->name }}</div>
-                                                    <div style="font-size: 0.75rem; color: var(--gray-500);">{{ $business->currency }}</div>
-                                                </div>
-                                            </div>
-                                        </button>
-                                    </form>
+                                <form method="POST" action="{{ route('business.switch', $business) }}" style="margin:0;">
+                                    @csrf
+                                    <button type="submit" style="width:100%;display:flex;align-items:center;gap:10px;padding:10px 14px;border:none;background:{{ $business->id === $activeBusiness->id ? '#f0f4ff' : 'transparent' }};cursor:pointer;font-family:inherit;text-align:left;">
+                                        <div style="width:8px;height:8px;border-radius:50%;background:{{ $business->id === $activeBusiness->id ? '#3b82f6' : '#cbd5e1' }};flex-shrink:0;"></div>
+                                        <div style="min-width:0;">
+                                            <div style="font-size:.875rem;font-weight:600;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $business->name }}</div>
+                                            <div style="font-size:.75rem;color:#64748b;">{{ $business->currency }}</div>
+                                        </div>
+                                    </button>
+                                </form>
                                 @endforeach
-
-                                <div class="dropdown-divider"></div>
-
-                                <!-- View Current Business Button -->
-                                <a href="{{ route('businesses.index') }}" class="dropdown-item" style="display: block; padding: 0.5rem 1rem; color: var(--primary-color); font-weight: 500;">
-                                    👁 View Businesses
-                                </a>
-
-                                <!-- Create New Business Button -->
-                                <a href="{{ route('businesses.create') }}" class="dropdown-item" style="display: block; padding: 0.5rem 1rem; color: var(--primary-color);">
-                                    ➕ New Business
-                                </a>
+                                <div style="height:1px;background:#e9ecef;margin:4px 0;"></div>
+                                <a href="{{ route('businesses.index') }}" style="display:block;padding:10px 14px;font-size:.875rem;color:#3b82f6;font-weight:500;text-decoration:none;">👁 View Businesses</a>
+                                <a href="{{ route('businesses.create') }}" style="display:block;padding:10px 14px;font-size:.875rem;color:#3b82f6;font-weight:500;text-decoration:none;">➕ New Business</a>
                             </div>
-                        </div>
+                        </details>
+
+                        <style>
+                        .biz-switcher { position:relative; display:inline-block; }
+                        .biz-switcher summary::-webkit-details-marker { display:none; }
+                        .biz-switcher > div { display:none; }
+                        .biz-switcher[open] > div { display:block; }
+                        </style>
+
+                        <script>
+                        document.addEventListener('click', function(e) {
+                            document.querySelectorAll('.biz-switcher[open]').forEach(function(el) {
+                                if (!el.contains(e.target)) el.removeAttribute('open');
+                            });
+                        });
+                        </script>
                     @else
                         <span style="color: var(--gray-500); font-size: 0.875rem;">No business selected</span>
                     @endif
@@ -143,7 +188,7 @@
                                 <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                             </svg>
                         </button>
-                        <div x-show="open" x-cloak @click.away="open = false" x-transition class="dropdown-menu slide-down max-w-xs overflow-auto">
+                        <div x-show="open" x-cloak @click.away="open = false" class="dropdown-menu" style="left:auto;right:0;min-width:200px;">
                             <div style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--gray-200);">
                                 <div style="font-weight: 500; color: var(--gray-900);">{{ Auth::user()->name }}</div>
                                 <div style="font-size: 0.75rem; color: var(--gray-500);">{{ Auth::user()->email }}</div>

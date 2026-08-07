@@ -120,9 +120,9 @@ class TransactionController extends Controller
 
         // If new category is provided, create or find it
         if (!empty($data['new_category'])) {
-            // Optional: you can add business_id to categories table to scope categories per business
             $category = Category::firstOrCreate(
-                ['name' => $data['new_category'], 'business_id' => $business->id]
+                ['name' => $data['new_category'], 'business_id' => $business->id],
+                ['type' => $data['type']]
             );
             $data['category_id'] = $category->id;
         }
@@ -345,7 +345,8 @@ class TransactionController extends Controller
         // If new category is provided, create or find it
         if (!empty($data['new_category'])) {
             $category = Category::firstOrCreate(
-                ['name' => $data['new_category'], 'business_id' => $business->id]
+                ['name' => $data['new_category'], 'business_id' => $business->id],
+                ['type' => $data['type'] ?? $transaction->type]
             );
             $data['category_id'] = $category->id;
         }
