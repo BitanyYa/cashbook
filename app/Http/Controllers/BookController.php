@@ -217,6 +217,16 @@ class BookController extends Controller
 
         $query = $book->transactions()->with(['category', 'user']);
 
+        // Employees only see their own transactions
+        $user = $request->user();
+        $businessRole = $user->businesses()->where('business_id', $business->id)->value('role');
+        $bookRole = $book->users()->where('users.id', $user->id)->first()?->pivot?->role;
+        $effectiveRole = in_array($businessRole, ['primary_admin', 'admin']) ? $businessRole : $bookRole;
+
+        if ($effectiveRole === 'employee') {
+            $query->where('user_id', $user->id);
+        }
+
         // Apply filters
         if ($request->filled('duration')) {
             $this->applyDurationFilter($query, $request->duration);
@@ -390,6 +400,16 @@ class BookController extends Controller
         $this->authorize('view', $book);
 
         $query = $book->transactions();
+
+        // Employees only see their own transactions in summary too
+        $user = $request->user();
+        $businessRole = $user->businesses()->where('business_id', $business->id)->value('role');
+        $bookRole = $book->users()->where('users.id', $user->id)->first()?->pivot?->role;
+        $effectiveRole = in_array($businessRole, ['primary_admin', 'admin']) ? $businessRole : $bookRole;
+
+        if ($effectiveRole === 'employee') {
+            $query->where('user_id', $user->id);
+        }
 
         // Apply the same filters as in transactionsData
         if ($request->filled('duration')) {
