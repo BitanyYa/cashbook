@@ -109,7 +109,9 @@
                 <div class="form-group">
                     <label for="role" class="form-label">Role</label>
                     <select id="role" name="role" class="form-select" required>
+                        <option value="viewer" selected>Viewer - Can only view transactions</option>
                         <option value="employee">Employee - Can add/edit own transactions</option>
+                        <option value="operator">Operator - Can add/edit transactions</option>
                         <option value="admin">Admin - Can manage books, members, and transactions</option>
                         <option value="primary_admin">Primary Admin - Full access to book and business management</option>
                     </select>
@@ -151,7 +153,9 @@
                                     @csrf
                                     @method('PUT')
                                     <select name="role" onchange="this.form.submit()" class="form-select" style="font-size: 0.875rem; padding: 0.25rem 0.5rem; width: auto;">
+                                        <option value="viewer" {{ $user->pivot->role === 'viewer' ? 'selected' : '' }}>Viewer</option>
                                         <option value="employee" {{ $user->pivot->role === 'employee' ? 'selected' : '' }}>Employee</option>
+                                        <option value="operator" {{ $user->pivot->role === 'operator' ? 'selected' : '' }}>Operator</option>
                                         <option value="admin" {{ $user->pivot->role === 'admin' ? 'selected' : '' }}>Admin</option>
                                         <option value="primary_admin" {{ $user->pivot->role === 'primary_admin' ? 'selected' : '' }}>Primary Admin</option>
                                     </select>

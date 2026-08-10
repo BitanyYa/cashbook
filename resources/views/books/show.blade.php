@@ -686,9 +686,10 @@
                 <div class="form-group">
                     <label for="user_role" class="form-label">Role</label>
                     <select id="user_role" name="role" class="form-select" required>
-                        <option value="employee">Employee</option>
-                        <option value="admin">Admin</option>
-                        <option value="primary_admin">Primary Admin</option>
+                        <option value="viewer" selected>Viewer - Can only view transactions</option>
+                        <option value="employee">Employee - Can add/edit own transactions</option>
+                        <option value="operator">Operator - Can add/edit transactions</option>
+                        <option value="admin">Admin - Can manage members and transactions</option>
                     </select>
                 </div>
                 <button type="submit" class="btn btn-primary" disabled id="add-user-btn">Add User</button>

@@ -171,9 +171,9 @@
                                     </span>
                                 ` : `
                                     <select id="role-select-${user.id}" style="padding: 0.3rem 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.8125rem; outline: none; background: #fff;">
-                                        <option value="operator" selected>Operator</option>
+                                        <option value="viewer" selected>Viewer</option>
+                                        <option value="operator">Operator</option>
                                         <option value="admin">Admin</option>
-                                        <option value="viewer">Viewer</option>
                                     </select>
                                 `}
                             </td>

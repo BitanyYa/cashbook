@@ -84,8 +84,10 @@ class AdminUserController extends Controller
 
         $data = $request->validate([
             'user_id' => 'required|exists:users,id',
-            'role' => 'required|in:primary_admin,admin,operator,employee,viewer'
+            'role' => 'nullable|in:primary_admin,admin,operator,employee,viewer'
         ]);
+
+        $role = $data['role'] ?? 'viewer';
 
         $user = User::findOrFail($data['user_id']);
 
@@ -98,25 +100,25 @@ class AdminUserController extends Controller
         }
 
         // Ensure user is in the business with appropriate business role
-        $businessRole = in_array($data['role'], ['primary_admin', 'admin']) ? $data['role'] : 'employee';
+        $businessRole = in_array($role, ['primary_admin', 'admin']) ? $role : 'employee';
 
         if (!$business->users()->where('users.id', $user->id)->exists()) {
             $business->users()->attach($user->id, ['role' => $businessRole]);
         } else {
             $currentRole = $business->users()->where('users.id', $user->id)->first()?->pivot->role;
-            if ($data['role'] === 'primary_admin' || ($data['role'] === 'admin' && $currentRole === 'employee')) {
-                $business->users()->updateExistingPivot($user->id, ['role' => $data['role']]);
+            if ($role === 'primary_admin' || ($role === 'admin' && $currentRole === 'employee')) {
+                $business->users()->updateExistingPivot($user->id, ['role' => $role]);
             }
         }
 
         // Associate user with cashbook with assigned role
         $book->users()->attach($user->id, [
-            'role' => $data['role'],
+            'role' => $role,
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => "{$user->name} successfully added to Cashbook with role " . ucfirst($data['role']) . "."
+            'message' => "{$user->name} successfully added to Cashbook with role " . ucfirst($role) . "."
         ]);
     }
 

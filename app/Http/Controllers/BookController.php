@@ -167,10 +167,18 @@ class BookController extends Controller
         //     $bookRole = $bookUser ? $bookUser->pivot->role : null;
         // }
 
+        $user = $request->user();
+        $businessRole = $user->businesses()->where('business_id', $business->id)->value('role');
         $bookUser = $user->books()->where('books.id', $book->id)->first();
         $bookRole = $bookUser ? $bookUser->pivot->role : null;
+        $effectiveRole = in_array($businessRole, ['primary_admin', 'admin']) ? $businessRole : $bookRole;
 
         $query = $book->transactions()->with(['category', 'user']);
+
+        // Non-admin users (employee, operator, viewer) should ONLY see their own posted transactions
+        if (!in_array($effectiveRole, ['primary_admin', 'admin'])) {
+            $query->where('user_id', $user->id);
+        }
 
         if ($request->filled('duration')) {
             $this->applyDurationFilter($query, $request->duration);
@@ -217,13 +225,13 @@ class BookController extends Controller
 
         $query = $book->transactions()->with(['category', 'user']);
 
-        // Employees only see their own transactions
+        // Non-admin users (employee, operator, viewer) only see their own transactions
         $user = $request->user();
         $businessRole = $user->businesses()->where('business_id', $business->id)->value('role');
         $bookRole = $book->users()->where('users.id', $user->id)->first()?->pivot?->role;
         $effectiveRole = in_array($businessRole, ['primary_admin', 'admin']) ? $businessRole : $bookRole;
 
-        if ($effectiveRole === 'employee') {
+        if (!in_array($effectiveRole, ['primary_admin', 'admin'])) {
             $query->where('user_id', $user->id);
         }
 
@@ -638,8 +646,10 @@ class BookController extends Controller
 
         $data = $request->validate([
             'user_id' => 'required|exists:users,id',
-            'role' => 'required|in:primary_admin,admin,employee'
+            'role' => 'nullable|in:primary_admin,admin,operator,employee,viewer'
         ]);
+
+        $role = $data['role'] ?? 'viewer';
 
         // Check if user is already assigned to this book
         if ($book->users()->where('users.id', $data['user_id'])->exists()) {
@@ -651,18 +661,18 @@ class BookController extends Controller
 
         // Check if user is a member of the business, if not, add them with appropriate role
         $businessUser = $business->users()->where('users.id', $data['user_id'])->first();
-        $businessRole = in_array($data['role'], ['primary_admin', 'admin']) ? $data['role'] : 'employee';
+        $businessRole = in_array($role, ['primary_admin', 'admin']) ? $role : 'employee';
 
         if (!$businessUser) {
             $business->users()->attach($data['user_id'], ['role' => $businessRole]);
         } else {
             $currentRole = $businessUser->pivot->role;
-            if ($data['role'] === 'primary_admin' || ($data['role'] === 'admin' && $currentRole === 'employee')) {
-                $business->users()->updateExistingPivot($data['user_id'], ['role' => $data['role']]);
+            if ($role === 'primary_admin' || ($role === 'admin' && $currentRole === 'employee')) {
+                $business->users()->updateExistingPivot($data['user_id'], ['role' => $role]);
             }
         }
 
-        $book->users()->attach($data['user_id'], ['role' => $data['role']]);
+        $book->users()->attach($data['user_id'], ['role' => $role]);
         return response()->json(['success' => true, 'message' => 'User added to book successfully']);
     }
 
