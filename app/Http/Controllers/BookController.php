@@ -646,10 +646,10 @@ class BookController extends Controller
 
         $data = $request->validate([
             'user_id' => 'required|exists:users,id',
-            'role' => 'nullable|in:primary_admin,admin,operator,employee,viewer'
+            'role' => 'nullable|in:primary_admin,admin,employee'
         ]);
 
-        $role = $data['role'] ?? 'viewer';
+        $role = $data['role'] ?? 'employee';
 
         // Check if user is already assigned to this book
         if ($book->users()->where('users.id', $data['user_id'])->exists()) {
@@ -671,6 +671,8 @@ class BookController extends Controller
                 $business->users()->updateExistingPivot($data['user_id'], ['role' => $role]);
             }
         }
+
+        $book->users()->attach($data['user_id'], ['role' => $role]);
 
         $addedUser = User::find($data['user_id']);
         $userName = $addedUser ? $addedUser->name : 'User';
@@ -694,7 +696,7 @@ class BookController extends Controller
         }
 
         $data = $request->validate([
-            'role' => 'required|in:primary_admin,admin,operator,employee,viewer'
+            'role' => 'required|in:primary_admin,admin,employee'
         ]);
 
         if ($data['role'] === 'primary_admin') {

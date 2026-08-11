@@ -84,10 +84,10 @@ class AdminUserController extends Controller
 
         $data = $request->validate([
             'user_id' => 'required|exists:users,id',
-            'role' => 'nullable|in:primary_admin,admin,operator,employee,viewer'
+            'role' => 'nullable|in:primary_admin,admin,employee'
         ]);
 
-        $role = $data['role'] ?? 'viewer';
+        $role = $data['role'] ?? 'employee';
 
         $user = User::findOrFail($data['user_id']);
 

@@ -686,9 +686,7 @@
                 <div class="form-group">
                     <label for="user_role" class="form-label">Role</label>
                     <select id="user_role" name="role" class="form-select" required>
-                        <option value="viewer" selected>Viewer - Can only view transactions</option>
-                        <option value="employee">Employee - Can add/edit own transactions</option>
-                        <option value="operator">Operator - Can add/edit transactions</option>
+                        <option value="employee" selected>Employee - Can add/edit own transactions</option>
                         <option value="admin">Admin - Can manage members and transactions</option>
                     </select>
                 </div>
@@ -2039,9 +2037,8 @@
                     // Primary admin can change role or transfer ownership
                     roleControlHtml = `
                         <select onchange="updateUserRole(${user.id}, this.value)" style="font-size: 0.8125rem; padding: 0.35rem 0.5rem; border: 1px solid var(--gray-300); border-radius: 6px; outline: none; background: #fff;">
-                            <option value="operator" ${user.role === 'operator' || user.role === 'employee' ? 'selected' : ''}>Operator</option>
+                            <option value="employee" ${user.role === 'employee' || user.role === 'operator' || user.role === 'viewer' ? 'selected' : ''}>Employee</option>
                             <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
-                            <option value="viewer" ${user.role === 'viewer' ? 'selected' : ''}>Viewer</option>
                         </select>
                         <button type="button" onclick="transferOwnershipToUser(${user.id}, '${escapeJsString(user.name)}')" 
                                 title="Transfer Ownership to this member"
@@ -2056,7 +2053,7 @@
                     `;
                 } else if (currentUserRole === 'admin') {
                     // Admin can see roles, but can only remove regular non-admin users
-                    const roleLabel = user.role === 'admin' ? 'Admin' : (user.role === 'viewer' ? 'Viewer' : 'Operator');
+                    const roleLabel = user.role === 'admin' ? 'Admin' : (user.role === 'primary_admin' ? 'Primary Admin' : 'Employee');
                     const canRemove = user.role !== 'admin' && user.role !== 'primary_admin';
 
                     roleControlHtml = `
@@ -2073,7 +2070,7 @@
                     `;
                 } else {
                     // Regular user view
-                    const roleLabel = user.role === 'admin' ? 'Admin' : (user.role === 'viewer' ? 'Viewer' : 'Operator');
+                    const roleLabel = user.role === 'admin' ? 'Admin' : (user.role === 'primary_admin' ? 'Primary Admin' : 'Employee');
                     roleControlHtml = `
                         <span style="font-size: 0.8125rem; font-weight: 600; color: #475569; padding: 0.25rem 0.5rem; background: #f1f5f9; border-radius: 4px;">
                             ${roleLabel}
@@ -2167,7 +2164,7 @@
                 if (data.success) {
                     showNotification(data.message || 'User added successfully!', 'success');
                     clearSelectedUser(); // Clear the selected user
-                    document.getElementById('user_role').value = 'viewer'; // Reset role to default (viewer)
+                    document.getElementById('user_role').value = 'employee'; // Reset role to default (employee)
                     loadBookUsers(); // Reload the users list
                 } else {
                     showNotification(data.message || 'Error adding user', 'error');
