@@ -295,6 +295,15 @@
             Reports
         </a>
     </div>
+    @else
+    <div class="book-page-header-right">
+        <a href="{{ route('reports.index', $book) }}" class="btn btn-secondary btn-sm">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Reports
+        </a>
+    </div>
     @endif
 </div>
 
@@ -353,7 +362,6 @@
         <input id="filter-search" type="text" placeholder="Search by remark or amount..." oninput="debounceSearch()">
         <span class="slash-hint">/</span>
     </div>
-    @if($bookRole !== 'employee')
     <button id="cash-in-btn" class="btn-cash-in">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
@@ -366,6 +374,7 @@
         </svg>
         Cash Out
     </button>
+    @if($bookRole !== 'employee')
     <button id="bulk-delete-btn" class="btn-bulk-delete" onclick="bulkDeleteTransactions()">
         <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -439,7 +448,6 @@
 </div>
 
 {{-- ══ MOBILE BOTTOM BAR ══ --}}
-@if($bookRole !== 'employee')
 <div class="cash-action-bar">
     <button class="btn-cash-in" onclick="openCashInModal()" style="flex:1;justify-content:center;padding:.875rem;font-size:1rem;border-radius:10px;">
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -454,7 +462,6 @@
         Cash Out
     </button>
 </div>
-@endif
 
 {{-- ══ RIGHT SIDE TRANSACTION DETAIL PANEL ══ --}}
 <div id="transaction-detail-modal" class="transaction-detail-modal" style="display:none;">
