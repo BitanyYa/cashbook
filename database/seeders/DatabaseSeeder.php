@@ -15,10 +15,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Delete all previous test users except the primary admin email
-        User::where('email', '!=', 'admin@cashbook.com')->delete();
-
-        // 2. Create or update the Primary Admin User
+        // 1. Create or update the Primary Admin User (without deleting other registered users)
         $admin = User::updateOrCreate(
             ['email' => 'admin@cashbook.com'],
             [
