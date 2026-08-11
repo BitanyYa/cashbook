@@ -42,6 +42,19 @@
     letter-spacing: .02em; margin: 0;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+
+@media (max-width: 640px) {
+    .book-page-title {
+        font-size: 1rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 150px;
+    }
+    .book-page-header-left { gap: .375rem; }
+    .book-back-btn { width: 28px; height: 28px; }
+    .book-icon-btn { width: 26px; height: 26px; }
+}
 .book-icon-btn {
     width: 30px; height: 30px;
     display: flex; align-items: center; justify-content: center;
@@ -194,20 +207,24 @@
 
 /* ── Mobile: tighten summary strip so all 3 cells fit ── */
 @media (max-width: 640px) {
-    .summary-cell {
-        gap: .4rem;
-        padding: .75rem .5rem;
+    .summary-strip {
         flex-direction: column;
-        align-items: flex-start;
+        border-radius: 10px;
     }
-    .summary-icon {
-        width: 28px; height: 28px;
+    .summary-cell {
+        flex-direction: row;
+        align-items: center;
+        gap: .75rem;
+        padding: .875rem 1rem;
+        border-right: none;
+        border-bottom: 1px solid #e9ecef;
     }
-    .summary-icon svg { width: 13px; height: 13px; }
-    .summary-cell-label { font-size: .7rem; }
-    .summary-cell-value { font-size: 1rem; }
-}}
-.summary-icon.green { background: #dcfce7; }
+    .summary-cell:last-child { border-bottom: none; }
+    .summary-icon { width: 32px; height: 32px; }
+    .summary-icon svg { width: 14px; height: 14px; }
+    .summary-cell-label { font-size: .75rem; }
+    .summary-cell-value { font-size: 1.25rem; }
+}
 .summary-icon.red   { background: #fee2e2; }
 .summary-icon.blue  { background: #dbeafe; }
 .summary-cell-label {
