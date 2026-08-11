@@ -672,8 +672,9 @@ class BookController extends Controller
             }
         }
 
-        $book->users()->attach($data['user_id'], ['role' => $role]);
-        return response()->json(['success' => true, 'message' => 'User added to book successfully']);
+        $addedUser = User::find($data['user_id']);
+        $userName = $addedUser ? $addedUser->name : 'User';
+        return response()->json(['success' => true, 'message' => "{$userName} added to book successfully with role " . ucfirst($role) . "."]);
     }
 
     public function updateUserRole(Request $request, Book $book, User $user)

@@ -692,7 +692,10 @@
                         <option value="admin">Admin - Can manage members and transactions</option>
                     </select>
                 </div>
-                <button type="submit" class="btn btn-primary" disabled id="add-user-btn">Add User</button>
+                <button type="submit" class="btn btn-primary" disabled id="add-user-btn" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.75rem 1.25rem; font-weight: 600;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    <span>Confirm & Add User</span>
+                </button>
             </form>
         </div>
         <div>
@@ -2162,9 +2165,9 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showNotification('User added successfully!', 'success');
+                    showNotification(data.message || 'User added successfully!', 'success');
                     clearSelectedUser(); // Clear the selected user
-                    document.getElementById('user_role').value = 'employee'; // Reset role to default
+                    document.getElementById('user_role').value = 'viewer'; // Reset role to default (viewer)
                     loadBookUsers(); // Reload the users list
                 } else {
                     showNotification(data.message || 'Error adding user', 'error');
