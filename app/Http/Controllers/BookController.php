@@ -599,9 +599,9 @@ class BookController extends Controller
             ], 403);
         }
 
-        $search = $request->get('q', '');
+        $search = trim($request->get('q', ''));
 
-        if (strlen($search) < 2) {
+        if (strlen($search) < 1) {
             return response()->json([
                 'success' => true,
                 'users' => []
@@ -611,14 +611,14 @@ class BookController extends Controller
         // Get users who are not already assigned to this book
         $bookUserIds = $book->users()->pluck('users.id');
 
-        // Search ALL users in the system, not just business members
+        // Search ALL users in the system (case-insensitive)
         $users = User::where(function($query) use ($search) {
-                $query->where('name', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%");
+                $query->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($search) . '%'])
+                      ->orWhereRaw('LOWER(email) LIKE ?', ['%' . strtolower($search) . '%']);
             })
             ->whereNotIn('id', $bookUserIds)
             ->where('id', '!=', $request->user()->id) // Exclude current user
-            ->limit(10)
+            ->limit(15)
             ->get(['id', 'name', 'email']);
 
         return response()->json([

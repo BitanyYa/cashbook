@@ -30,11 +30,11 @@ class AdminUserController extends Controller
             'book_id' => 'nullable|exists:books,id'
         ]);
 
-        $email = strtolower(trim($request->get('email', '')));
+        $queryTerm = strtolower(trim($request->get('email', $request->get('q', ''))));
         $bookId = $request->get('book_id');
         $business = $request->attributes->get('activeBusiness');
 
-        if (empty($email)) {
+        if (empty($queryTerm)) {
             return response()->json([
                 'success' => true,
                 'users' => []
@@ -46,8 +46,11 @@ class AdminUserController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized book access'], 403);
         }
 
-        // Case-insensitive email search
-        $users = User::whereRaw('LOWER(email) LIKE ?', ["%{$email}%"])
+        // Case-insensitive name and email search
+        $users = User::where(function($q) use ($queryTerm) {
+                $q->whereRaw('LOWER(email) LIKE ?', ["%{$queryTerm}%"])
+                  ->orWhereRaw('LOWER(name) LIKE ?', ["%{$queryTerm}%"]);
+            })
             ->limit(15)
             ->get();
 

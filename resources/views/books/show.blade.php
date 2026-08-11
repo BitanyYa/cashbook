@@ -1875,7 +1875,7 @@
 
                 clearTimeout(searchTimeout);
 
-                if (query.length < 2) {
+                if (query.length < 1) {
                     resultsDiv.style.display = 'none';
                     return;
                 }
