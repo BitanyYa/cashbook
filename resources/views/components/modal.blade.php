@@ -28,7 +28,7 @@ $maxWidthValue = $maxWidthValues[$maxWidth];
      x-transition:leave="transition ease-in duration-200"
      x-transition:leave-start="opacity-100"
      x-transition:leave-end="opacity-0"
-     style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 50; overflow-y: auto; display: flex; min-height: 100vh; align-items: center; justify-content: center; padding: 1rem;">
+     style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999; overflow-y: auto; -webkit-overflow-scrolling: touch; display: flex; align-items: center; justify-content: center; padding: 1rem 0.75rem calc(1.5rem + env(safe-area-inset-bottom, 0px)) 0.75rem;">
 
     <!-- Simple backdrop -->
     <div x-show="show"
@@ -51,7 +51,7 @@ $maxWidthValue = $maxWidthValues[$maxWidth];
          x-transition:leave-start="opacity-100 transform scale-100 translate-y-0"
          x-transition:leave-end="opacity-0 transform scale-95 translate-y-4"
          @click.stop
-         style="position: relative; width: 100%; max-width: {{ $maxWidthValue }}; margin: auto; background: white; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); overflow: hidden; z-index: 51;">
+         style="position: relative; width: 100%; max-width: {{ $maxWidthValue }}; max-height: calc(100dvh - 2rem); max-height: calc(100vh - 2rem); margin: auto; background: white; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); overflow-y: auto; -webkit-overflow-scrolling: touch; z-index: 10000;">
 
         <!-- Close button -->
         <button x-on:click="show = false"

@@ -647,10 +647,11 @@ body {
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-lg);
     max-width: 500px;
-    width: 90%;
-    height: 100dvh; /* modern browsers */
-    max-height: 90vh;
+    width: 92%;
+    max-height: calc(100dvh - 2rem);
+    max-height: calc(100vh - 2rem);
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .modal-header {

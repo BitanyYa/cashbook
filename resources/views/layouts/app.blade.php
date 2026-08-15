@@ -69,10 +69,12 @@
                 /* hide sidebar completely on mobile */
                 .app-sidebar { display: none !important; }
 
-                /* content fills full width, reduce padding */
+                /* content fills full width with bottom safe area clearance */
                 .app-content {
-                    padding: 0 !important;
-                    overflow-x: hidden;
+                    padding: 0.75rem 0.75rem calc(5rem + env(safe-area-inset-bottom, 0px)) 0.75rem !important;
+                    overflow-y: auto !important;
+                    overflow-x: hidden !important;
+                    -webkit-overflow-scrolling: touch;
                 }
 
                 /* shrink topbar on mobile */
@@ -94,7 +96,7 @@
 
                 /* safe area bottom padding for fixed bars */
                 .mobile-bottom-bar {
-                    padding-bottom: calc(0.875rem + env(safe-area-inset-bottom));
+                    padding-bottom: calc(0.875rem + env(safe-area-inset-bottom, 0px));
                 }
             }
 
