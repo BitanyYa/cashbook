@@ -157,12 +157,8 @@ class TransactionController extends Controller
             // Employees may still create transactions, but their status is pending
         }
 
-        // Set transaction status based on book role
-        $status = match($bookRole) {
-            'primary_admin', 'admin' => 'approved',
-            'employee' => 'pending',
-            default => 'pending'
-        };
+        // Set transaction status to approved so entries appear immediately in the book
+        $status = 'approved';
 
         $transaction = new Transaction([
             'business_id' => $business->id,
