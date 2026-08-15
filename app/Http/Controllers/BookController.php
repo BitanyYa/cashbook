@@ -332,7 +332,7 @@ class BookController extends Controller
             $runningBalances[$t->id] = $runningBalance;
         }
 
-        $data = $transactions->map(function ($transaction) use ($business, $book, $request, $runningBalances) {
+        $data = $transactions->map(function ($transaction) use ($business, $book, $request, $runningBalances, $user) {
             // Build the Date HTML
             $dateObj = $transaction->transaction_date;
             $dateStr = $dateObj->isToday() ? 'Today' : ($dateObj->isYesterday() ? 'Yesterday' : $dateObj->format('d M, Y'));
@@ -388,7 +388,13 @@ class BookController extends Controller
                 'bill' => $billHtml,
                 'amount' => $amountHtml,
                 'balance' => $balanceHtml,
-                'actions' => $this->generateActionButtons($transaction, $request)
+                'actions' => $this->generateActionButtons($transaction, $request),
+                'raw_date_group' => $transaction->transaction_date->format('d F Y'),
+                'raw_time' => strtolower($transaction->transaction_date->format('g:i a')),
+                'raw_type' => $transaction->type,
+                'raw_amount' => number_format($transaction->amount, 0),
+                'raw_user_name' => $transaction->user_id === $user->id ? 'You' : ($transaction->user->name ?? 'User'),
+                'raw_mode' => $transaction->mode ? ucfirst($transaction->mode) : 'Cash',
             ];
         });
 

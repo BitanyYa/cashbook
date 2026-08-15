@@ -74,6 +74,19 @@
     gap: .5rem;
     margin-bottom: .625rem;
 }
+@media (max-width: 767px) {
+    .filter-pills-row {
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 4px;
+        margin-bottom: 0.5rem;
+    }
+    .fpill {
+        flex-shrink: 0;
+        border-radius: 20px;
+    }
+}
 .fpill {
     display: inline-flex;
     align-items: center;
@@ -283,7 +296,19 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
             </svg>
         </a>
-        <h1 class="book-page-title">{{ $book->name }}</h1>
+        <div style="min-width:0;flex:1;">
+            <h1 class="book-page-title">{{ strtoupper($book->name) }}</h1>
+            @php
+                $memberNames = $book->users->pluck('name')->filter()->values();
+                $memberSub = $memberNames->take(3)->join(', ');
+                if ($memberNames->count() > 3) {
+                    $memberSub .= ', ...';
+                }
+            @endphp
+            @if(!empty($memberSub))
+                <div style="font-size:.72rem;color:var(--gray-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;">{{ $memberSub }}</div>
+            @endif
+        </div>
         @if(in_array($userRole, ['primary_admin', 'admin']))
         <a href="{{ route('books.edit', $book) }}" class="book-icon-btn" title="Book Settings">
             <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -440,7 +465,17 @@
     </div>
 </div>
 
-{{-- ══ TABLE ══ --}}
+{{-- ══ MOBILE ENTRY COUNT HEADER ══ --}}
+<div id="mobile-entry-count-header" style="display:none;align-items:center;justify-content:center;margin:.85rem 0 .5rem;gap:12px;font-size:.78rem;color:#64748b;font-weight:600;">
+    <div style="flex:1;height:1px;background:#cbd5e1;"></div>
+    <span id="mobile-entry-count-text">Showing 0 entries</span>
+    <div style="flex:1;height:1px;background:#cbd5e1;"></div>
+</div>
+
+{{-- ══ MOBILE DATE-GROUPED CARD LIST (VISIBLE ON MOBILE) ══ --}}
+<div id="mobile-transactions-list" style="display:none;flex-direction:column;gap:.5rem;margin-bottom:1rem;"></div>
+
+{{-- ══ TABLE (VISIBLE ON DESKTOP) ══ --}}
 <div class="txn-scroll-area">
 <div class="card" style="margin-top:.25rem;border-radius:10px;overflow:hidden;">
     <div class="card-body" style="padding:0;">
@@ -464,15 +499,21 @@
 </div>
 </div>
 
-{{-- ══ MOBILE BOTTOM BAR ══ --}}
+{{-- ══ MOBILE BOTTOM BAR WITH FLOATING MIC BUTTON ══ --}}
 <div class="cash-action-bar">
-    <button class="btn-cash-in" onclick="openCashInModal()" style="flex:1;justify-content:center;padding:.875rem;font-size:1rem;border-radius:10px;">
+    <button class="btn-cash-in" onclick="openCashInModal()" style="flex:1;justify-content:center;padding:.875rem;font-size:1rem;border-radius:10px;display:flex;align-items:center;gap:6px;">
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
         </svg>
         Cash In
     </button>
-    <button class="btn-cash-out" onclick="openCashOutModal()" style="flex:1;justify-content:center;padding:.875rem;font-size:1rem;border-radius:10px;">
+    <button type="button" onclick="showNotification('Voice entry feature coming soon!', 'info')"
+            style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(37,99,235,0.35);flex-shrink:0;cursor:pointer;margin-top:-14px;z-index:91;" title="Voice Entry">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+        </svg>
+    </button>
+    <button class="btn-cash-out" onclick="openCashOutModal()" style="flex:1;justify-content:center;padding:.875rem;font-size:1rem;border-radius:10px;display:flex;align-items:center;gap:6px;">
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4"/>
         </svg>
@@ -515,10 +556,8 @@
         </div>
         <div class="modal-footer">
             <div class="detail-actions">
-                @if($bookRole !== 'employee')
                 <button id="edit-transaction-btn" class="btn btn-primary" onclick="editTransactionFromDetail()">Edit Transaction</button>
                 <button id="delete-transaction-btn" class="btn btn-danger" onclick="deleteTransactionFromDetail()">Delete Transaction</button>
-                @endif
             </div>
         </div>
     </div>
@@ -874,6 +913,72 @@
             reloadTable(true);
         }
 
+        // ── CashBook App Card Renderer (Employees & Mobile) ──────────
+        function renderMobileTransactionCards(dataArray, totalRecords) {
+            const isEmployeeView = @js($bookRole === 'employee');
+            const isMobile = window.innerWidth < 768;
+            const useCardLayout = isEmployeeView || isMobile;
+
+            const mobileContainer = document.getElementById('mobile-transactions-list');
+            const mobileHeader = document.getElementById('mobile-entry-count-header');
+            const mobileCountText = document.getElementById('mobile-entry-count-text');
+            const desktopTable = document.querySelector('.txn-scroll-area');
+
+            if (!mobileContainer) return;
+
+            if (useCardLayout) {
+                if (desktopTable) desktopTable.style.display = 'none';
+                mobileContainer.style.display = 'flex';
+                if (mobileHeader) mobileHeader.style.display = 'flex';
+                if (mobileCountText) mobileCountText.textContent = `Showing ${dataArray ? dataArray.length : 0} entries`;
+
+                mobileContainer.innerHTML = '';
+                if (!dataArray || dataArray.length === 0) {
+                    mobileContainer.innerHTML = '<div style="text-align:center;padding:2.5rem 1rem;color:#64748b;font-size:.875rem;background:#fff;border-radius:10px;border:1px solid #e2e8f0;">No transactions found</div>';
+                    return;
+                }
+
+                let currentGroup = '';
+                dataArray.forEach(item => {
+                    const dateGroup = item.raw_date_group || 'Transactions';
+                    if (dateGroup !== currentGroup) {
+                        currentGroup = dateGroup;
+                        const groupHeader = document.createElement('div');
+                        groupHeader.style.cssText = 'font-size:.8125rem;font-weight:600;color:#64748b;padding:.5rem .25rem .3rem;margin-top:.4rem;';
+                        groupHeader.textContent = currentGroup;
+                        mobileContainer.appendChild(groupHeader);
+                    }
+
+                    const card = document.createElement('div');
+                    card.style.cssText = 'background:#fff;border-radius:10px;padding:.85rem 1.125rem;border:1px solid #e2e8f0;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.03);display:flex;flex-direction:column;gap:.4rem;transition:all .15s;';
+                    card.onmouseover = function() { this.style.transform = 'translateY(-1px)'; this.style.boxShadow = '0 4px 8px rgba(0,0,0,.05)'; };
+                    card.onmouseout = function() { this.style.transform = 'none'; this.style.boxShadow = '0 1px 2px rgba(0,0,0,.03)'; };
+                    card.onclick = function() { showTransactionDetail(item.id); };
+
+                    const isIncome = item.raw_type === 'income';
+                    const modeName = item.raw_mode || 'Cash';
+                    const amountStr = (isIncome ? '' : '-') + item.raw_amount;
+                    const amountColor = isIncome ? '#059669' : '#dc2626';
+
+                    card.innerHTML = `
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <span style="display:inline-block;padding:.25rem .75rem;background:#e0f2fe;color:#0369a1;border-radius:6px;font-size:.8rem;font-weight:700;">${modeName}</span>
+                            <span style="font-size:1.15rem;font-weight:800;color:${amountColor};">${amountStr}</span>
+                        </div>
+                        <div style="font-size:.8rem;margin-top:.15rem;border-top:1px solid #f8fafc;padding-top:.4rem;">
+                            <span style="color:#2563eb;font-weight:700;">Entry by ${item.raw_user_name}</span>
+                            <span style="color:#64748b;margin-left:4px;">at ${item.raw_time}</span>
+                        </div>
+                    `;
+                    mobileContainer.appendChild(card);
+                });
+            } else {
+                if (desktopTable) desktopTable.style.display = 'block';
+                mobileContainer.style.display = 'none';
+                if (mobileHeader) mobileHeader.style.display = 'none';
+            }
+        }
+
         // Initialize DataTable
         $(document).ready(function() {
             dataTable = $('#transactions-table').DataTable({
@@ -997,6 +1102,16 @@
                     // Enable/disable navigation buttons
                     $('#custom-prev-btn').prop('disabled', !api.page.hasPrevious()).css('opacity', api.page.hasPrevious() ? 1 : 0.5);
                     $('#custom-next-btn').prop('disabled', !api.page.hasNext()).css('opacity', api.page.hasNext() ? 1 : 0.5);
+
+                    // Render mobile card view on mobile devices
+                    renderMobileTransactionCards(api.rows({ page: 'current' }).data().toArray(), info.recordsDisplay);
+                }
+            });
+
+            window.addEventListener('resize', function() {
+                if (dataTable) {
+                    const info = dataTable.page.info();
+                    renderMobileTransactionCards(dataTable.rows({ page: 'current' }).data().toArray(), info.recordsDisplay);
                 }
             });
 
