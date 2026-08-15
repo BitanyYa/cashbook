@@ -664,10 +664,15 @@ class TransactionController extends Controller
 
     public function receipt(Request $request, Transaction $transaction)
     {
-        $business = $request->attributes->get('activeBusiness');
-        abort_unless($transaction->business_id === $business->id, 404);
         $user = $request->user();
+        $business = $transaction->business;
+        abort_unless($business, 404);
+
         $role = $user->getBusinessRole($business);
+        if (!$role) {
+            abort(403, 'Unauthorized access to transaction business');
+        }
+
         if ($role === 'employee') {
             abort_unless($user->belongsToMany(Book::class, 'book_user')->where('books.id', $transaction->book_id)->exists(), 403);
         }
@@ -693,7 +698,7 @@ class TransactionController extends Controller
             $fullPath = storage_path('app/public/' . $targetPath);
         }
 
-        abort_unless($fullPath && file_exists($fullPath), 404, 'File attachment not found on server.');
+        abort_unless($fullPath && file_exists($fullPath), 404, 'File attachment not found on server. Files uploaded prior to volume setup or server deployment may have been reset.');
 
         return response()->file($fullPath);
     }
