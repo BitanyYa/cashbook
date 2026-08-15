@@ -890,7 +890,6 @@
                     dataTable.page('first');
                 }
                 dataTable.ajax.reload(null, false);
-                updateSummaryCards();
             }
         }
 
@@ -902,9 +901,8 @@
                 if (dataTable) {
                     dataTable.page('first');
                     dataTable.ajax.reload(null, false);
-                    updateSummaryCards();
                 }
-            }, 300);
+            }, 150);
         }
 
         function clearAllFilters() {
@@ -998,6 +996,22 @@
                         d.mode     = document.getElementById('filter-mode')?.value     || '';
                         d.category = document.getElementById('filter-category')?.value || '';
                         d.search   = document.getElementById('filter-search')?.value   || '';
+                    },
+                    dataSrc: function(json) {
+                        if (json.summary) {
+                            const incomeEl = document.querySelector('.cash-in-card .summary-amount');
+                            const expenseEl = document.querySelector('.cash-out-card .summary-amount');
+                            const balanceEl = document.querySelector('.net-balance-card .summary-amount');
+
+                            if (incomeEl) incomeEl.textContent = json.summary.income;
+                            if (expenseEl) expenseEl.textContent = json.summary.expense;
+                            if (balanceEl) {
+                                balanceEl.textContent = json.summary.balance;
+                                balanceEl.style.color = json.summary.balance_color;
+                            }
+                        }
+                        renderMobileTransactionCards(json.data, json.recordsFiltered);
+                        return json.data;
                     },
                     error: function(xhr, error, thrown) {
                         console.error('DataTable AJAX error:', xhr.status, thrown, xhr.responseText);

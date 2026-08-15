@@ -312,14 +312,21 @@ class BookController extends Controller
         $totalRecords = $book->transactions()->count();
         $filteredRecords = $query->count();
 
+        // Calculate filtered summary totals directly from query before pagination
+        $summaryIncome = (clone $query)->where('type', 'income')->sum('amount');
+        $summaryExpense = (clone $query)->where('type', 'expense')->sum('amount');
+        $summaryBalance = $summaryIncome - $summaryExpense;
+
         $transactions = $query->skip($start)->take($length)->get();
 
-        // Calculate running balance for all transactions in chronological order
-        $allBookTransactions = $book->transactions()
+        // Fast raw DB query for running balances (avoids heavy Eloquent model instantiation)
+        $allBookTransactions = \Illuminate\Support\Facades\DB::table('transactions')
+            ->where('book_id', $book->id)
+            ->select('id', 'type', 'amount')
             ->orderBy('transaction_date', 'asc')
             ->orderBy('created_at', 'asc')
             ->orderBy('id', 'asc')
-            ->get(['id', 'type', 'amount']);
+            ->get();
 
         $runningBalance = 0;
         $runningBalances = [];
@@ -399,10 +406,16 @@ class BookController extends Controller
         });
 
         return response()->json([
-            'draw' => $request->get('draw'),
+            'draw' => (int) $request->get('draw'),
             'recordsTotal' => $totalRecords,
             'recordsFiltered' => $filteredRecords,
-            'data' => $data
+            'data' => $data,
+            'summary' => [
+                'income' => number_format($summaryIncome, 0),
+                'expense' => number_format($summaryExpense, 0),
+                'balance' => ($summaryBalance >= 0 ? '' : '-') . number_format(abs($summaryBalance), 0),
+                'balance_color' => $summaryBalance >= 0 ? '#16a34a' : '#dc2626',
+            ]
         ]);
     }
 
