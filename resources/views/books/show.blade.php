@@ -575,9 +575,16 @@
                 <textarea id="description" name="description" rows="2" class="form-input" placeholder="Optional notes…"></textarea>
             </div>
             <div class="form-group" style="margin-bottom:0;">
-                <label for="receipt" class="form-label">Receipts / Attachments (optional)</label>
-                <input id="receipt" name="receipts[]" type="file" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" class="form-input" style="padding:.4rem;" multiple />
-                <p style="font-size:.72rem;color:var(--gray-500);margin-top:.2rem;">Upload multiple photos or files (up to 100MB per file)</p>
+                <label class="form-label">Receipts / Attachments (optional)</label>
+                <div style="display:flex;flex-direction:column;gap:.4rem;">
+                    <label style="display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .85rem;border:1.5px dashed #3b82f6;border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:600;color:#2563eb;background:#eff6ff;width:fit-content;">
+                        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Choose / Add Files
+                        <input id="receipt" name="receipts[]" type="file" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" style="display:none;" multiple onchange="handleFileSelection(event, 'add')" />
+                    </label>
+                    <span style="font-size:.72rem;color:var(--gray-500);">Upload multiple photos or files (up to 100MB per file)</span>
+                    <div id="add-staged-files" style="display:flex;flex-direction:column;gap:.35rem;margin-top:.25rem;"></div>
+                </div>
             </div>
             <div style="display:flex;justify-content:flex-end;gap:.625rem;border-top:1px solid var(--gray-200);padding-top:.875rem;position:sticky;bottom:0;background:#fff;">
                 <button type="button" @click="$dispatch('close-modal','add-transaction')" class="btn btn-secondary">Cancel</button>
@@ -671,13 +678,16 @@
             </div>
             <div class="form-group" style="margin-bottom:0;">
                 <label class="form-label">Receipts / Attachments (optional)</label>
-                <label style="display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .75rem;border:1.5px solid var(--gray-300);border-radius:6px;cursor:pointer;font-size:.78rem;font-weight:600;color:var(--primary-color);background:#fff;">
-                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
-                    Attach Files / Photos
-                    <input id="edit_receipt" name="receipts[]" type="file" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" style="display:none;" multiple />
-                </label>
-                <p style="font-size:.72rem;color:#16a34a;margin-top:.2rem;">Upload multiple photos or files (up to 100MB per file)</p>
-                <div id="current-receipt" style="margin-top:.3rem;display:none;"></div>
+                <div style="display:flex;flex-direction:column;gap:.4rem;">
+                    <label style="display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .85rem;border:1.5px dashed #3b82f6;border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:600;color:#2563eb;background:#eff6ff;width:fit-content;">
+                        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Choose / Add Files
+                        <input id="edit_receipt" name="receipts[]" type="file" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" style="display:none;" multiple onchange="handleFileSelection(event, 'edit')" />
+                    </label>
+                    <span style="font-size:.72rem;color:var(--gray-500);">Upload multiple photos or files (up to 100MB per file)</span>
+                    <div id="current-receipt" style="margin-top:.25rem;display:none;"></div>
+                    <div id="edit-staged-files" style="display:flex;flex-direction:column;gap:.35rem;margin-top:.25rem;"></div>
+                </div>
             </div>
             <div style="display:flex;justify-content:flex-end;gap:.625rem;border-top:1px solid var(--gray-200);padding-top:.875rem;position:sticky;bottom:0;background:#fff;">
                 <button type="button" @click="$dispatch('close-modal','edit-transaction')" class="btn btn-secondary">Cancel</button>
@@ -1391,6 +1401,81 @@
             window.dispatchEvent(new CustomEvent('close-modal', { detail: 'add-transaction' }));
         }
 
+        // DataTransfer containers for accumulating multiple selected files across sequential clicks
+        const addDataTransfer = new DataTransfer();
+        const editDataTransfer = new DataTransfer();
+
+        window.handleFileSelection = function(event, mode) {
+            const input = event.target;
+            const dt = mode === 'add' ? addDataTransfer : editDataTransfer;
+
+            if (input.files && input.files.length) {
+                for (let i = 0; i < input.files.length; i++) {
+                    dt.items.add(input.files[i]);
+                }
+            }
+            renderStagedFiles(mode);
+        };
+
+        window.renderStagedFiles = function(mode) {
+            const dt = mode === 'add' ? addDataTransfer : editDataTransfer;
+            const container = document.getElementById(mode === 'add' ? 'add-staged-files' : 'edit-staged-files');
+            const input = document.getElementById(mode === 'add' ? 'receipt' : 'edit_receipt');
+
+            if (input) {
+                input.files = dt.files;
+            }
+
+            if (!container) return;
+            container.innerHTML = '';
+
+            for (let i = 0; i < dt.files.length; i++) {
+                const file = dt.files[i];
+                const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+                
+                const item = document.createElement('div');
+                item.className = 'staged-file-item';
+                item.style.cssText = 'display:flex;align-items:center;justify-content:space-between;background:#f8fafc;padding:.35rem .65rem;border-radius:6px;font-size:.75rem;color:#334155;border:1px solid #cbd5e1;';
+                item.innerHTML = `
+                    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:82%;">
+                        📄 <strong>${file.name}</strong> <span style="color:#64748b;">(${sizeMb} MB)</span>
+                    </span>
+                    <button type="button" onclick="removeStagedFile(${i}, '${mode}')" style="border:none;background:none;color:#ef4444;font-weight:bold;cursor:pointer;font-size:.85rem;padding:0 .25rem;">✕</button>
+                `;
+                container.appendChild(item);
+            }
+        };
+
+        window.removeStagedFile = function(index, mode) {
+            const dt = mode === 'add' ? addDataTransfer : editDataTransfer;
+            const newDt = new DataTransfer();
+
+            for (let i = 0; i < dt.files.length; i++) {
+                if (i !== index) {
+                    newDt.items.add(dt.files[i]);
+                }
+            }
+
+            if (mode === 'add') {
+                addDataTransfer.items.clear();
+                for (let i = 0; i < newDt.files.length; i++) addDataTransfer.items.add(newDt.files[i]);
+            } else {
+                editDataTransfer.items.clear();
+                for (let i = 0; i < newDt.files.length; i++) editDataTransfer.items.add(newDt.files[i]);
+            }
+
+            renderStagedFiles(mode);
+        };
+
+        window.resetStagedFiles = function(mode) {
+            if (mode === 'add') {
+                addDataTransfer.items.clear();
+            } else {
+                editDataTransfer.items.clear();
+            }
+            renderStagedFiles(mode);
+        };
+
         // Alpine.js availability check
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => {
@@ -1429,8 +1514,9 @@
                         detail: 'add-transaction'
                     }));
 
-                    // Reset form
+                    // Reset form & staged files
                     this.reset();
+                    resetStagedFiles('add');
 
                     // Show success message
                     showNotification('Transaction added successfully!', 'success');
@@ -1516,6 +1602,9 @@
                             ? modeVal.charAt(0).toUpperCase() + modeVal.slice(1)
                             : '';
                     }
+
+                    // Reset staged edit files
+                    resetStagedFiles('edit');
 
                     // Handle current receipt
                     const currentReceipt = document.getElementById('current-receipt');
