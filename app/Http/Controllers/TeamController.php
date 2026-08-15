@@ -81,8 +81,14 @@ class TeamController extends Controller
             return back()->withErrors(['member' => 'Admins can only remove regular employee members.']);
         }
 
+        // Detach user from all books belonging to this business
+        $bookIds = $business->books()->pluck('books.id');
+        if ($bookIds->isNotEmpty()) {
+            $user->books()->detach($bookIds);
+        }
+
         $business->users()->detach($user->id);
-        return back()->with('success', 'Member removed from business successfully.');
+        return back()->with('success', 'Member removed from business and all associated cashbooks successfully.');
     }
 
     public function leave(Request $request)
@@ -96,6 +102,12 @@ class TeamController extends Controller
             if ($primaryAdminCount <= 1) {
                 return back()->withErrors(['member' => 'You are the only primary admin and cannot leave the business.']);
             }
+        }
+
+        // Detach user from all books belonging to this business
+        $bookIds = $business->books()->pluck('books.id');
+        if ($bookIds->isNotEmpty()) {
+            $user->books()->detach($bookIds);
         }
 
         $business->users()->detach($user->id);
