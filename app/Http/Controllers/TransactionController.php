@@ -348,23 +348,38 @@ class TransactionController extends Controller
             'receipts.*' => 'nullable|file|mimes:jpg,jpeg,png,gif,webp,heic,heif,pdf,doc,docx,xls,xlsx|max:102400',
         ]);
 
-        $uploadedPaths = [];
+        $existingPaths = self::parseImagePaths($transaction->image_path);
+        $keepPaths = $request->input('keep_receipts', null);
+        $keptExisting = is_array($keepPaths)
+            ? array_values(array_intersect($existingPaths, $keepPaths))
+            : $existingPaths;
+
+        // Delete any existing files that were removed by user
+        $removedPaths = array_diff($existingPaths, $keptExisting);
+        foreach ($removedPaths as $removed) {
+            $trimmed = trim($removed, " \t\n\r\0\x0B\"'");
+            if ($trimmed && Storage::exists($trimmed)) {
+                Storage::delete($trimmed);
+            }
+        }
+
+        $newUploadedPaths = [];
         if ($request->hasFile('receipt')) {
-            $uploadedPaths[] = $request->file('receipt')->store("receipts/{$business->id}");
+            $newUploadedPaths[] = $request->file('receipt')->store("receipts/{$business->id}");
         }
         if ($request->hasFile('receipts')) {
             foreach ($request->file('receipts') as $file) {
                 if ($file && $file->isValid()) {
-                    $uploadedPaths[] = $file->store("receipts/{$business->id}");
+                    $newUploadedPaths[] = $file->store("receipts/{$business->id}");
                 }
             }
         }
 
-        if (!empty($uploadedPaths)) {
-            if ($transaction->image_path) {
-                $this->deleteTransactionFiles($transaction->image_path);
-            }
-            $data['image_path'] = count($uploadedPaths) === 1 ? $uploadedPaths[0] : json_encode(array_values($uploadedPaths));
+        $allPaths = array_values(array_unique(array_merge($keptExisting, $newUploadedPaths)));
+        if (!empty($allPaths)) {
+            $data['image_path'] = count($allPaths) === 1 ? $allPaths[0] : json_encode($allPaths);
+        } else {
+            $data['image_path'] = null;
         }
 
         // If new category is provided, create or find it
@@ -618,6 +633,25 @@ class TransactionController extends Controller
         return back();
     }
 
+    public static function parseImagePaths(?string $imagePath): array
+    {
+        if (empty($imagePath)) {
+            return [];
+        }
+
+        $trimmed = trim($imagePath);
+        $decoded = json_decode($trimmed, true);
+
+        if (is_array($decoded)) {
+            return array_values(array_filter(array_map(function($item) {
+                return is_string($item) ? trim($item, " \t\n\r\0\x0B\"'") : '';
+            }, $decoded)));
+        }
+
+        $clean = trim($trimmed, " \t\n\r\0\x0B\"'");
+        return !empty($clean) ? [$clean] : [];
+    }
+
     public function receipt(Request $request, Transaction $transaction)
     {
         $business = $request->attributes->get('activeBusiness');
@@ -630,29 +664,36 @@ class TransactionController extends Controller
 
         abort_unless($transaction->image_path, 404);
 
-        $decoded = json_decode($transaction->image_path, true);
-        $paths = is_array($decoded) ? $decoded : explode(',', $transaction->image_path);
-
+        $paths = self::parseImagePaths($transaction->image_path);
         $index = (int) $request->get('index', 0);
-        $targetPath = trim($paths[$index] ?? $paths[0] ?? '');
+        $targetPath = $paths[$index] ?? $paths[0] ?? '';
 
-        abort_unless($targetPath && Storage::exists($targetPath), 404);
-        return response()->file(Storage::path($targetPath));
+        if (empty($targetPath)) {
+            abort(404);
+        }
+
+        $fullPath = null;
+        if (Storage::exists($targetPath)) {
+            $fullPath = Storage::path($targetPath);
+        } elseif (file_exists(storage_path('app/' . $targetPath))) {
+            $fullPath = storage_path('app/' . $targetPath);
+        } elseif (file_exists(storage_path('app/private/' . $targetPath))) {
+            $fullPath = storage_path('app/private/' . $targetPath);
+        } elseif (file_exists(storage_path('app/public/' . $targetPath))) {
+            $fullPath = storage_path('app/public/' . $targetPath);
+        }
+
+        abort_unless($fullPath && file_exists($fullPath), 404, 'File attachment not found on server.');
+
+        return response()->file($fullPath);
     }
 
     protected function deleteTransactionFiles(?string $imagePath): void
     {
-        if (!$imagePath) {
-            return;
-        }
-
-        $decoded = json_decode($imagePath, true);
-        $paths = is_array($decoded) ? $decoded : explode(',', $imagePath);
-
+        $paths = self::parseImagePaths($imagePath);
         foreach ($paths as $path) {
-            $trimmed = trim($path);
-            if ($trimmed && Storage::exists($trimmed)) {
-                Storage::delete($trimmed);
+            if ($path && Storage::exists($path)) {
+                Storage::delete($path);
             }
         }
     }

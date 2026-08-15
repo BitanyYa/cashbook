@@ -1529,11 +1529,16 @@
                         if (!Array.isArray(files)) files = [files];
 
                         if (currentReceipt) {
-                            currentReceipt.innerHTML = 'Current Attachments: ' + files.map((f, i) => `
-                                <a href="/transactions/${transaction.id}/receipt?index=${i}" target="_blank" style="color:var(--primary-color);text-decoration:none;margin-right:0.4rem;">
-                                    View File ${files.length > 1 ? (i + 1) : ''}
-                                </a>
-                            `).join(' | ');
+                            currentReceipt.innerHTML = '<div style="font-size:.78rem;font-weight:600;color:var(--gray-700);margin-bottom:.3rem;">Existing Attachments:</div>' + 
+                            files.map((f, i) => `
+                                <div class="existing-attachment-item" style="display:inline-flex;align-items:center;gap:.35rem;background:var(--gray-100);padding:.25rem .5rem;border-radius:4px;font-size:.75rem;margin-right:.4rem;margin-bottom:.4rem;">
+                                    <input type="hidden" name="keep_receipts[]" value="${f.replace(/"/g, '&quot;')}">
+                                    <a href="/transactions/${transaction.id}/receipt?index=${i}" target="_blank" style="color:var(--primary-color);text-decoration:none;font-weight:500;">
+                                        File ${files.length > 1 ? (i + 1) : ''} ↗
+                                    </a>
+                                    <button type="button" onclick="this.parentElement.remove();if(!document.querySelectorAll('.existing-attachment-item').length)document.getElementById('current-receipt').style.display='none';" style="border:none;background:none;color:var(--danger-color);cursor:pointer;font-weight:bold;font-size:.85rem;padding:0 .2rem;">✕</button>
+                                </div>
+                            `).join('');
                             currentReceipt.style.display = 'block';
                         }
                     } else {
