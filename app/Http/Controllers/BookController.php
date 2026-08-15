@@ -417,11 +417,11 @@ class BookController extends Controller
 
         // Employees only see their own transactions in summary too
         $user = $request->user();
-        $businessRole = $user->businesses()->where('business_id', $business->id)->value('role');
-        $bookRole = $book->users()->where('users.id', $user->id)->first()?->pivot?->role;
+        $businessRole = $user->getBusinessRole($business);
+        $bookRole = $user->getBookRole($book);
         $effectiveRole = in_array($businessRole, ['primary_admin', 'admin']) ? $businessRole : $bookRole;
 
-        if ($effectiveRole === 'employee') {
+        if (!in_array($effectiveRole, ['primary_admin', 'admin'])) {
             $query->where('user_id', $user->id);
         }
 
