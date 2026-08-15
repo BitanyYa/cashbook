@@ -180,10 +180,15 @@ class TransactionController extends Controller
 
         $uploadedPaths = [];
         if ($request->hasFile('receipt')) {
-            $uploadedPaths[] = $request->file('receipt')->store("receipts/{$business->id}");
+            $file = $request->file('receipt');
+            if ($file && $file->isValid()) {
+                $uploadedPaths[] = $file->store("receipts/{$business->id}");
+            }
         }
         if ($request->hasFile('receipts')) {
-            foreach ($request->file('receipts') as $file) {
+            $files = $request->file('receipts');
+            $filesArray = is_array($files) ? $files : [$files];
+            foreach ($filesArray as $file) {
                 if ($file && $file->isValid()) {
                     $uploadedPaths[] = $file->store("receipts/{$business->id}");
                 }
@@ -365,10 +370,15 @@ class TransactionController extends Controller
 
         $newUploadedPaths = [];
         if ($request->hasFile('receipt')) {
-            $newUploadedPaths[] = $request->file('receipt')->store("receipts/{$business->id}");
+            $file = $request->file('receipt');
+            if ($file && $file->isValid()) {
+                $newUploadedPaths[] = $file->store("receipts/{$business->id}");
+            }
         }
         if ($request->hasFile('receipts')) {
-            foreach ($request->file('receipts') as $file) {
+            $files = $request->file('receipts');
+            $filesArray = is_array($files) ? $files : [$files];
+            foreach ($filesArray as $file) {
                 if ($file && $file->isValid()) {
                     $newUploadedPaths[] = $file->store("receipts/{$business->id}");
                 }
