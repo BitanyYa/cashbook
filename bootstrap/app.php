@@ -22,5 +22,15 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, \Illuminate\Http\Request $request) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your session token has expired. Page is refreshing...',
+                    'csrf_expired' => true
+                ], 419);
+            }
+            return redirect()->back()->withInput($request->except('_token', 'password'))
+                ->with('error', 'Your session expired due to inactivity. Please try submitting again.');
+        });
     })->create();

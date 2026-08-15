@@ -392,6 +392,31 @@
             </main>
         </div>
 
+        <script>
+            // ── Keepalive Session Ping (Every 5 minutes) ──────────────
+            setInterval(function() {
+                fetch('/up', { method: 'GET', cache: 'no-store' }).catch(() => {});
+            }, 5 * 60 * 1000);
+
+            // ── Global 419 CSRF Expiration Interceptor ────────────────
+            if (typeof jQuery !== 'undefined') {
+                $(document).ajaxError(function(event, jqxhr, settings, thrownError) {
+                    if (jqxhr.status === 419 || (jqxhr.responseJSON && jqxhr.responseJSON.csrf_expired)) {
+                        window.location.reload();
+                    }
+                });
+            }
+
+            const originalFetch = window.fetch;
+            window.fetch = async function(...args) {
+                const response = await originalFetch(...args);
+                if (response.status === 419) {
+                    window.location.reload();
+                }
+                return response;
+            };
+        </script>
+
         @stack('scripts')
         @livewireScripts
     </body>
