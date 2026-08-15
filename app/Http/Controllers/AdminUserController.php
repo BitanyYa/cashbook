@@ -102,16 +102,9 @@ class AdminUserController extends Controller
             ], 400);
         }
 
-        // Ensure user is in the business with appropriate business role
-        $businessRole = in_array($role, ['primary_admin', 'admin']) ? $role : 'employee';
-
+        // Ensure user is attached to the business as a member if not already present
         if (!$business->users()->where('users.id', $user->id)->exists()) {
-            $business->users()->attach($user->id, ['role' => $businessRole]);
-        } else {
-            $currentRole = $business->users()->where('users.id', $user->id)->first()?->pivot->role;
-            if ($role === 'primary_admin' || ($role === 'admin' && $currentRole === 'employee')) {
-                $business->users()->updateExistingPivot($user->id, ['role' => $role]);
-            }
+            $business->users()->attach($user->id, ['role' => 'employee']);
         }
 
         // Associate user with cashbook with assigned role

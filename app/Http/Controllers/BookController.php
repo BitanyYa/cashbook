@@ -27,8 +27,8 @@ class BookController extends Controller
 
         $query = Book::where('business_id', $business->id);
 
-        if (!in_array($role, ['primary_admin', 'admin'])) {
-            // Employees can only see books they are assigned to
+        if ($role !== 'primary_admin') {
+            // Book admins and employees only see books they are explicitly assigned to
             $assignedBookIds = $user->books()->where('business_id', $business->id)->pluck('books.id');
             $query->whereIn('id', $assignedBookIds);
         }
@@ -678,17 +678,9 @@ class BookController extends Controller
             ], 400);
         }
 
-        // Check if user is a member of the business, if not, add them with appropriate role
-        $businessUser = $business->users()->where('users.id', $data['user_id'])->first();
-        $businessRole = in_array($role, ['primary_admin', 'admin']) ? $role : 'employee';
-
-        if (!$businessUser) {
-            $business->users()->attach($data['user_id'], ['role' => $businessRole]);
-        } else {
-            $currentRole = $businessUser->pivot->role;
-            if ($role === 'primary_admin' || ($role === 'admin' && $currentRole === 'employee')) {
-                $business->users()->updateExistingPivot($data['user_id'], ['role' => $role]);
-            }
+        // Ensure user is attached to the business as a member if not already present
+        if (!$business->users()->where('users.id', $data['user_id'])->exists()) {
+            $business->users()->attach($data['user_id'], ['role' => 'employee']);
         }
 
         $book->users()->attach($data['user_id'], ['role' => $role]);

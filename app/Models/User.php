@@ -95,13 +95,13 @@ class User extends Authenticatable
         if (!$book) {
             return null;
         }
-        
+
         $businessRole = $book->business_id ? $this->getBusinessRole($book->business) : null;
-        if (in_array($businessRole, ['primary_admin', 'admin'])) {
-            return $businessRole;
+        if ($businessRole === 'primary_admin') {
+            return 'primary_admin';
         }
 
-        // Fall back to the explicit book_user pivot role.
+        // Fall back to the explicit book_user pivot role for this specific book.
         return $this->books()->where('book_id', $book->id)->value('book_user.role');
     }
 
@@ -138,13 +138,13 @@ class User extends Authenticatable
             return collect();
         }
 
-        // If user is a primary admin or admin, return all books
+        // Only Primary Admin automatically accesses all books in the business
         $businessRole = $this->getBusinessRole($business);
-        if (in_array($businessRole, ['primary_admin', 'admin'])) {
+        if ($businessRole === 'primary_admin') {
             return $business->books;
         }
 
-        // Return only books the user has explicit access to
+        // Return only books the user has explicit membership in
         return $business->books()->whereHas('users', function ($query) {
             $query->where('user_id', $this->id);
         })->get();
