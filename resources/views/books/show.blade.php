@@ -505,8 +505,8 @@
                 </div>
             </div>
             <div class="detail-section" id="receipt-section" style="display:none;">
-                <h4>Receipt</h4>
-                <a id="receipt-link" href="#" target="_blank" class="btn btn-sm btn-secondary">View Receipt</a>
+                <h4>Receipts / Attachments</h4>
+                <div id="receipt-links-container" style="display:flex;flex-wrap:wrap;gap:0.5rem;"></div>
             </div>
             <div class="detail-section">
                 <h4>Activity Timeline</h4>
@@ -575,8 +575,9 @@
                 <textarea id="description" name="description" rows="2" class="form-input" placeholder="Optional notes…"></textarea>
             </div>
             <div class="form-group" style="margin-bottom:0;">
-                <label for="receipt" class="form-label">Receipt (optional)</label>
-                <input id="receipt" name="receipt" type="file" accept="image/*,application/pdf" class="form-input" style="padding:.4rem;" />
+                <label for="receipt" class="form-label">Receipts / Attachments (optional)</label>
+                <input id="receipt" name="receipts[]" type="file" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" class="form-input" style="padding:.4rem;" multiple />
+                <p style="font-size:.72rem;color:var(--gray-500);margin-top:.2rem;">Upload multiple photos or files (up to 100MB per file)</p>
             </div>
             <div style="display:flex;justify-content:flex-end;gap:.625rem;border-top:1px solid var(--gray-200);padding-top:.875rem;position:sticky;bottom:0;background:#fff;">
                 <button type="button" @click="$dispatch('close-modal','add-transaction')" class="btn btn-secondary">Cancel</button>
@@ -669,16 +670,14 @@
                 <textarea id="edit_description" name="description" rows="2" class="form-input" placeholder="Add remarks…"></textarea>
             </div>
             <div class="form-group" style="margin-bottom:0;">
-                <label class="form-label">Receipt (optional)</label>
+                <label class="form-label">Receipts / Attachments (optional)</label>
                 <label style="display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .75rem;border:1.5px solid var(--gray-300);border-radius:6px;cursor:pointer;font-size:.78rem;font-weight:600;color:var(--primary-color);background:#fff;">
                     <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
-                    Attach Bills
-                    <input id="edit_receipt" name="receipt" type="file" accept="image/*,application/pdf" style="display:none;" multiple />
+                    Attach Files / Photos
+                    <input id="edit_receipt" name="receipts[]" type="file" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" style="display:none;" multiple />
                 </label>
-                <p style="font-size:.72rem;color:#16a34a;margin-top:.2rem;">Attach up to 4 images or PDF files</p>
-                <div id="current-receipt" style="margin-top:.3rem;display:none;">
-                    Current: <a id="edit-receipt-link" href="#" target="_blank" style="color:var(--primary-color);text-decoration:none;">View receipt</a>
-                </div>
+                <p style="font-size:.72rem;color:#16a34a;margin-top:.2rem;">Upload multiple photos or files (up to 100MB per file)</p>
+                <div id="current-receipt" style="margin-top:.3rem;display:none;"></div>
             </div>
             <div style="display:flex;justify-content:flex-end;gap:.625rem;border-top:1px solid var(--gray-200);padding-top:.875rem;position:sticky;bottom:0;background:#fff;">
                 <button type="button" @click="$dispatch('close-modal','edit-transaction')" class="btn btn-secondary">Cancel</button>
@@ -1210,11 +1209,26 @@
 
             // Receipt section
             const receiptSection = document.getElementById('receipt-section');
+            const receiptLinksContainer = document.getElementById('receipt-links-container');
             if (transaction.image_path) {
-                receiptSection.style.display = 'block';
-                document.getElementById('receipt-link').href = `/transactions/${transaction.id}/receipt`;
+                let files = [];
+                try {
+                    files = JSON.parse(transaction.image_path);
+                } catch(e) {
+                    files = [transaction.image_path];
+                }
+                if (!Array.isArray(files)) files = [files];
+
+                if (receiptLinksContainer) {
+                    receiptLinksContainer.innerHTML = files.map((f, i) => `
+                        <a href="/transactions/${transaction.id}/receipt?index=${i}" target="_blank" class="btn btn-sm btn-secondary" style="font-size:0.75rem;">
+                            View File ${files.length > 1 ? (i + 1) : ''}
+                        </a>
+                    `).join('');
+                }
+                if (receiptSection) receiptSection.style.display = 'block';
             } else {
-                receiptSection.style.display = 'none';
+                if (receiptSection) receiptSection.style.display = 'none';
             }
 
             // Activity timeline
@@ -1505,10 +1519,23 @@
 
                     // Handle current receipt
                     const currentReceipt = document.getElementById('current-receipt');
-                    const receiptLink    = document.getElementById('edit-receipt-link');
                     if (transaction.image_path) {
-                        if (receiptLink)    receiptLink.href            = `/transactions/${transaction.id}/receipt`;
-                        if (currentReceipt) currentReceipt.style.display = 'block';
+                        let files = [];
+                        try {
+                            files = JSON.parse(transaction.image_path);
+                        } catch(e) {
+                            files = [transaction.image_path];
+                        }
+                        if (!Array.isArray(files)) files = [files];
+
+                        if (currentReceipt) {
+                            currentReceipt.innerHTML = 'Current Attachments: ' + files.map((f, i) => `
+                                <a href="/transactions/${transaction.id}/receipt?index=${i}" target="_blank" style="color:var(--primary-color);text-decoration:none;margin-right:0.4rem;">
+                                    View File ${files.length > 1 ? (i + 1) : ''}
+                                </a>
+                            `).join(' | ');
+                            currentReceipt.style.display = 'block';
+                        }
                     } else {
                         if (currentReceipt) currentReceipt.style.display = 'none';
                     }

@@ -115,7 +115,9 @@ class TransactionController extends Controller
             'transaction_date' => 'required|date',
             'description' => 'nullable|string',
             'contact_name' => 'nullable|string|max:255',
-            'receipt' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:4096',
+            'receipt' => 'nullable|file|mimes:jpg,jpeg,png,gif,webp,heic,heif,pdf,doc,docx,xls,xlsx|max:102400',
+            'receipts' => 'nullable|array',
+            'receipts.*' => 'nullable|file|mimes:jpg,jpeg,png,gif,webp,heic,heif,pdf,doc,docx,xls,xlsx|max:102400',
         ]);
 
         // If new category is provided, create or find it
@@ -176,10 +178,21 @@ class TransactionController extends Controller
             'status' => $status,
         ]);
 
+        $uploadedPaths = [];
         if ($request->hasFile('receipt')) {
-            $path = $request->file('receipt')->store("receipts/{$business->id}");
-            $transaction->image_path = $path;
+            $uploadedPaths[] = $request->file('receipt')->store("receipts/{$business->id}");
         }
+        if ($request->hasFile('receipts')) {
+            foreach ($request->file('receipts') as $file) {
+                if ($file && $file->isValid()) {
+                    $uploadedPaths[] = $file->store("receipts/{$business->id}");
+                }
+            }
+        }
+        if (!empty($uploadedPaths)) {
+            $transaction->image_path = count($uploadedPaths) === 1 ? $uploadedPaths[0] : json_encode(array_values($uploadedPaths));
+        }
+
         $transaction->save();
 
         ActivityLog::create([
@@ -330,16 +343,28 @@ class TransactionController extends Controller
             'transaction_date' => 'required|date',
             'description' => 'nullable|string',
             'contact_name' => 'nullable|string|max:255',
-            'receipt' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:4096',
+            'receipt' => 'nullable|file|mimes:jpg,jpeg,png,gif,webp,heic,heif,pdf,doc,docx,xls,xlsx|max:102400',
+            'receipts' => 'nullable|array',
+            'receipts.*' => 'nullable|file|mimes:jpg,jpeg,png,gif,webp,heic,heif,pdf,doc,docx,xls,xlsx|max:102400',
         ]);
 
+        $uploadedPaths = [];
         if ($request->hasFile('receipt')) {
-            // Delete old receipt if exists
-            if ($transaction->image_path && Storage::exists($transaction->image_path)) {
-                Storage::delete($transaction->image_path);
+            $uploadedPaths[] = $request->file('receipt')->store("receipts/{$business->id}");
+        }
+        if ($request->hasFile('receipts')) {
+            foreach ($request->file('receipts') as $file) {
+                if ($file && $file->isValid()) {
+                    $uploadedPaths[] = $file->store("receipts/{$business->id}");
+                }
             }
-            $path = $request->file('receipt')->store("receipts/{$business->id}");
-            $data['image_path'] = $path;
+        }
+
+        if (!empty($uploadedPaths)) {
+            if ($transaction->image_path) {
+                $this->deleteTransactionFiles($transaction->image_path);
+            }
+            $data['image_path'] = count($uploadedPaths) === 1 ? $uploadedPaths[0] : json_encode(array_values($uploadedPaths));
         }
 
         // If new category is provided, create or find it
@@ -406,10 +431,8 @@ class TransactionController extends Controller
 
         abort_unless($canDelete, 403);
 
-        // Delete receipt file if exists
-        if ($transaction->image_path && Storage::exists($transaction->image_path)) {
-            Storage::delete($transaction->image_path);
-        }
+        // Delete receipt file(s) if exist
+        $this->deleteTransactionFiles($transaction->image_path);
 
         $transaction->delete();
 
@@ -484,10 +507,8 @@ class TransactionController extends Controller
 
         // If authorization passes for all, proceed with deletion
         foreach ($transactions as $transaction) {
-            // Delete receipt file if it exists
-            if ($transaction->image_path && Storage::exists($transaction->image_path)) {
-                Storage::delete($transaction->image_path);
-            }
+            // Delete receipt file(s) if exist
+            $this->deleteTransactionFiles($transaction->image_path);
 
             // Log the deletion activity for each transaction
             ActivityLog::create([
@@ -606,8 +627,34 @@ class TransactionController extends Controller
         if ($role === 'employee') {
             abort_unless($user->belongsToMany(Book::class, 'book_user')->where('books.id', $transaction->book_id)->exists(), 403);
         }
-        abort_unless($transaction->image_path && Storage::exists($transaction->image_path), 404);
-        return response()->file(Storage::path($transaction->image_path));
+
+        abort_unless($transaction->image_path, 404);
+
+        $decoded = json_decode($transaction->image_path, true);
+        $paths = is_array($decoded) ? $decoded : explode(',', $transaction->image_path);
+
+        $index = (int) $request->get('index', 0);
+        $targetPath = trim($paths[$index] ?? $paths[0] ?? '');
+
+        abort_unless($targetPath && Storage::exists($targetPath), 404);
+        return response()->file(Storage::path($targetPath));
+    }
+
+    protected function deleteTransactionFiles(?string $imagePath): void
+    {
+        if (!$imagePath) {
+            return;
+        }
+
+        $decoded = json_decode($imagePath, true);
+        $paths = is_array($decoded) ? $decoded : explode(',', $imagePath);
+
+        foreach ($paths as $path) {
+            $trimmed = trim($path);
+            if ($trimmed && Storage::exists($trimmed)) {
+                Storage::delete($trimmed);
+            }
+        }
     }
 
     public function detail(Request $request, Transaction $transaction)
