@@ -318,25 +318,19 @@ class TransactionController extends Controller
         $user = $request->user();
         $businessRole = $user->getBusinessRole($business);
 
-        // Check book-level permissions
+        // Check book-level permissions (Only Admins / Primary Admins can edit posted entries)
         if (in_array($businessRole, ['primary_admin', 'admin'])) {
-            // Primary admins and admins can edit any transaction
             $canEdit = true;
         } else {
-            // For employees, check their role in the specific book
             $bookUser = $user->books()->where('books.id', $transaction->book_id)->first();
-
             if (!$bookUser) {
                 abort(403, 'You do not have access to this book');
             }
-
             $bookRole = $bookUser->pivot->role;
-
-            // Primary admins/admins can edit any transaction; employees can edit only their own
-            $canEdit = in_array($bookRole, ['primary_admin', 'admin']) || ($bookRole === 'employee' && $transaction->user_id === $user->id);
+            $canEdit = in_array($bookRole, ['primary_admin', 'admin']);
         }
 
-        abort_unless($canEdit, 403);
+        abort_unless($canEdit, 403, 'Employees do not have permission to edit posted transactions.');
 
         $data = $request->validate([
             'book_id' => 'required|exists:books,id',

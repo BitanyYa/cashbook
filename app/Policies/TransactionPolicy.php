@@ -43,17 +43,12 @@ class TransactionPolicy
         // Check book-level permissions
         $bookRole = $user->getBookRole($transaction->book);
 
-        // Primary admins and admins can edit any transaction
+        // Primary admins and admins can edit transactions
         if (in_array($bookRole, ['primary_admin', 'admin'])) {
             return true;
         }
 
-        // Operators / Employees can edit their own transactions
-        if (in_array($bookRole, ['operator', 'employee'])) {
-            return $transaction->user_id === $user->id;
-        }
-
-        // Viewers cannot edit transactions
+        // Employees have read-only access to transactions
         return false;
     }
 
@@ -68,17 +63,12 @@ class TransactionPolicy
         // Check book-level permissions
         $bookRole = $user->getBookRole($transaction->book);
 
-        // Primary admins and admins can delete any transaction
+        // Primary admins and admins can delete transactions
         if (in_array($bookRole, ['primary_admin', 'admin'])) {
             return true;
         }
 
-        // Operators / Employees can delete their own transactions
-        if (in_array($bookRole, ['operator', 'employee'])) {
-            return $transaction->user_id === $user->id;
-        }
-
-        // Viewers cannot delete transactions
+        // Employees have read-only access to transactions
         return false;
     }
 }

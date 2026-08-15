@@ -1359,28 +1359,17 @@
             // Activity timeline
             populateActivityTimeline(activities);
 
-            // Action buttons
+            // Action buttons — Only Primary Admins & Admins can edit or delete posted transactions
             const bookRole = '<?php echo $bookRole; ?>';
+            const editBtn = document.getElementById('edit-transaction-btn');
+            const deleteBtn = document.getElementById('delete-transaction-btn');
 
-            // Only show buttons for non-employees
-            if (bookRole !== 'employee') {
-                document.getElementById('edit-transaction-btn').style.display = 'inline-block';
-                document.getElementById('delete-transaction-btn').style.display = 'inline-block';
-                // Employees can only edit/delete if they created the transaction
-                if (bookRole === 'employee') {
-                    if (transaction.user.id === {{ auth()->id() }}) {
-                        document.getElementById('edit-transaction-btn').onclick = () => editTransactionFromDetail();
-                        document.getElementById('delete-transaction-btn').onclick = () => deleteTransactionFromDetail();
-                    } else {
-                        // Hide buttons if employee didn't create it
-                        document.getElementById('edit-transaction-btn').style.display = 'none';
-                        document.getElementById('delete-transaction-btn').style.display = 'none';
-                    }
-                } else {
-                    // Other roles can always edit/delete
-                    document.getElementById('edit-transaction-btn').onclick = () => editTransactionFromDetail();
-                    document.getElementById('delete-transaction-btn').onclick = () => deleteTransactionFromDetail();
-                }
+            if (['primary_admin', 'admin'].includes(bookRole)) {
+                if (editBtn) { editBtn.style.display = 'inline-block'; editBtn.onclick = () => editTransactionFromDetail(); }
+                if (deleteBtn) { deleteBtn.style.display = 'inline-block'; deleteBtn.onclick = () => deleteTransactionFromDetail(); }
+            } else {
+                if (editBtn) editBtn.style.display = 'none';
+                if (deleteBtn) deleteBtn.style.display = 'none';
             }
 
         }
