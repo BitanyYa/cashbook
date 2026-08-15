@@ -426,7 +426,8 @@
     @endif
 </div>
 
-{{-- ══ SUMMARY STRIP ══ --}}
+{{-- ══ SUMMARY STRIP (Hidden for Employees) ══ --}}
+@if($bookRole !== 'employee')
 <div class="summary-strip">
     <div class="summary-cell cash-in-card">
         <div class="summary-icon green">
@@ -464,6 +465,7 @@
         </div>
     </div>
 </div>
+@endif
 
 {{-- ══ MOBILE ENTRY COUNT HEADER ══ --}}
 <div id="mobile-entry-count-header" style="display:none;align-items:center;justify-content:center;margin:.85rem 0 .5rem;gap:12px;font-size:.78rem;color:#64748b;font-weight:600;">
