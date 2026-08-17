@@ -667,28 +667,38 @@ class TransactionController extends Controller
             abort_unless($user->belongsToMany(Book::class, 'book_user')->where('books.id', $transaction->book_id)->exists(), 403);
         }
 
-        abort_unless($transaction->image_path, 404);
+        abort_unless($transaction->image_path, 404, 'No receipt attached');
 
         $paths = self::parseImagePaths($transaction->image_path);
         $index = (int) $request->get('index', 0);
         $targetPath = $paths[$index] ?? $paths[0] ?? '';
 
         if (empty($targetPath)) {
-            abort(404);
+            abort(404, 'Receipt path is empty');
         }
+
+        $cleanPath = ltrim(trim($targetPath, " \t\n\r\0\x0B\"'"), '/\\');
 
         $fullPath = null;
-        if (Storage::exists($targetPath)) {
-            $fullPath = Storage::path($targetPath);
-        } elseif (file_exists(storage_path('app/' . $targetPath))) {
-            $fullPath = storage_path('app/' . $targetPath);
-        } elseif (file_exists(storage_path('app/private/' . $targetPath))) {
-            $fullPath = storage_path('app/private/' . $targetPath);
-        } elseif (file_exists(storage_path('app/public/' . $targetPath))) {
-            $fullPath = storage_path('app/public/' . $targetPath);
+        $possibleLocations = [
+            Storage::disk('local')->path($cleanPath),
+            Storage::disk('public')->path($cleanPath),
+            storage_path('app/' . $cleanPath),
+            storage_path('app/private/' . $cleanPath),
+            storage_path('app/public/' . $cleanPath),
+            public_path('storage/' . $cleanPath),
+        ];
+
+        foreach ($possibleLocations as $loc) {
+            if ($loc && file_exists($loc) && !is_dir($loc)) {
+                $fullPath = $loc;
+                break;
+            }
         }
 
-        abort_unless($fullPath && file_exists($fullPath), 404, 'File attachment not found on server. Files uploaded prior to volume setup or server deployment may have been reset.');
+        if (!$fullPath || !file_exists($fullPath)) {
+            abort(404, 'Receipt file not found on server. On cloud hosts like Railway, files uploaded prior to persistent volume mounting are erased when a new deployment container builds.');
+        }
 
         return response()->file($fullPath);
     }
