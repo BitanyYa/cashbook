@@ -475,14 +475,44 @@
 @endif
 
 {{-- ══ MOBILE ENTRY COUNT HEADER ══ --}}
-<div id="mobile-entry-count-header" style="display:none;align-items:center;justify-content:center;margin:.85rem 0 .5rem;gap:12px;font-size:.78rem;color:#64748b;font-weight:600;">
+<div id="mobile-entry-count-header" style="{{ ($userRole === 'employee') ? 'display:flex;' : 'display:none;' }}align-items:center;justify-content:center;margin:.85rem 0 .5rem;gap:12px;font-size:.78rem;color:#64748b;font-weight:600;">
     <div style="flex:1;height:1px;background:#cbd5e1;"></div>
-    <span id="mobile-entry-count-text">Showing 0 entries</span>
+    <span id="mobile-entry-count-text">Showing {{ count($initialCardData ?? []) }} {{ Str::plural('entry', count($initialCardData ?? [])) }}</span>
     <div style="flex:1;height:1px;background:#cbd5e1;"></div>
 </div>
 
-{{-- ══ MOBILE DATE-GROUPED CARD LIST (VISIBLE ON MOBILE) ══ --}}
-<div id="mobile-transactions-list" style="display:none;flex-direction:column;gap:.5rem;margin-bottom:1rem;"></div>
+{{-- ══ MOBILE DATE-GROUPED CARD LIST (VISIBLE ON MOBILE & EMPLOYEE) ══ --}}
+<div id="mobile-transactions-list" style="{{ ($userRole === 'employee') ? 'display:flex;' : 'display:none;' }}flex-direction:column;gap:.5rem;margin-bottom:1rem;">
+    @php $currentGroup = ''; @endphp
+    @forelse($initialCardData ?? [] as $item)
+        @if(($item['raw_date_group'] ?? '') !== $currentGroup)
+            @php $currentGroup = $item['raw_date_group'] ?? ''; @endphp
+            <div style="font-size:.8125rem;font-weight:600;color:#64748b;padding:.5rem .25rem .3rem;margin-top:.4rem;">
+                {{ $currentGroup }}
+            </div>
+        @endif
+        @php
+            $isIncome = ($item['raw_type'] ?? '') === 'income';
+            $amountStr = ($isIncome ? '' : '-') . ($item['raw_amount'] ?? 0);
+            $amountColor = $isIncome ? '#059669' : '#dc2626';
+        @endphp
+        <div style="background:#fff;border-radius:10px;padding:.85rem 1.125rem;border:1px solid #e2e8f0;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.03);display:flex;flex-direction:column;gap:.4rem;transition:all .15s;"
+             onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 8px rgba(0,0,0,.05)';"
+             onmouseout="this.style.transform='none';this.style.boxShadow='0 1px 2px rgba(0,0,0,.03)';"
+             onclick="showTransactionDetail({{ $item['id'] }})">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="display:inline-block;padding:.25rem .75rem;background:#e0f2fe;color:#0369a1;border-radius:6px;font-size:.8rem;font-weight:700;">{{ $item['raw_mode'] }}</span>
+                <span style="font-size:1.15rem;font-weight:800;color:{{ $amountColor }};">{{ $amountStr }}</span>
+            </div>
+            <div style="font-size:.8rem;margin-top:.15rem;border-top:1px solid #f8fafc;padding-top:.4rem;">
+                <span style="color:#2563eb;font-weight:700;">Entry by {{ $item['raw_user_name'] }}</span>
+                <span style="color:#64748b;margin-left:4px;">at {{ $item['raw_time'] }}</span>
+            </div>
+        </div>
+    @empty
+        <div style="text-align:center;padding:2.5rem 1rem;color:#64748b;font-size:.875rem;background:#fff;border-radius:10px;border:1px solid #e2e8f0;">No transactions found</div>
+    @endforelse
+</div>
 
 {{-- ══ TABLE (VISIBLE ON DESKTOP) ══ --}}
 <div class="txn-scroll-area">

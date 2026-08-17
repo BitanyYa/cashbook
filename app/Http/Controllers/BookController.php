@@ -214,14 +214,26 @@ class BookController extends Controller
         $transactions = $query->orderByDesc('transaction_date')
             ->orderByDesc('created_at')
             ->orderByDesc('id')
-            ->paginate(20)
+            ->paginate(50)
             ->appends($request->query());
+
+        $initialCardData = $transactions->map(function ($t) use ($user) {
+            return [
+                'id' => $t->id,
+                'raw_date_group' => $t->transaction_date->format('d F Y'),
+                'raw_time' => strtolower($t->transaction_date->format('g:i a')),
+                'raw_type' => $t->type,
+                'raw_amount' => number_format($t->amount, 0),
+                'raw_user_name' => $t->user_id === $user->id ? 'You' : ($t->user->name ?? 'User'),
+                'raw_mode' => $t->mode ? ucfirst($t->mode) : 'Cash',
+            ];
+        });
 
         $categories = Category::where('business_id', $business->id)->get();
         $modes = $book->transactions()->distinct()->pluck('mode')->filter()->values();
         $contacts = $book->transactions()->whereNotNull('contact_name')->where('contact_name', '!=', '')->distinct()->pluck('contact_name')->values();
 
-        return view('books.show', compact('book','transactions','categories','bookRole','modes','contacts'));
+        return view('books.show', compact('book','transactions','initialCardData','categories','bookRole','modes','contacts'));
     }
 
     public function transactionsData(Request $request, Book $book)
