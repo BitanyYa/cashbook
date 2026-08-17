@@ -1251,6 +1251,19 @@
                     editNewCategoryInput.disabled = false;
                 }
             });
+
+            // ── Real-time background sync (No-delay / No-miss live updates) ──
+            setInterval(function() {
+                if (document.visibilityState === 'visible' && dataTable) {
+                    reloadTable(false);
+                }
+            }, 10000);
+
+            document.addEventListener('visibilitychange', function() {
+                if (document.visibilityState === 'visible' && dataTable) {
+                    reloadTable(false);
+                }
+            });
         });
 
         function updateSelectedCount() {
