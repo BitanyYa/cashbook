@@ -383,6 +383,18 @@ function renderBooks(books) {
                 </a>
             </div>
         </div>`).join('');
-}
+document.addEventListener('click', function(e) {
+    const link = e.target.closest('#books-pagination a');
+    if (link && link.href) {
+        e.preventDefault();
+        try {
+            const urlObj = new URL(link.href);
+            const page = urlObj.searchParams.get('page') || 1;
+            fetchBooks(page);
+        } catch (err) {
+            window.location.href = link.href;
+        }
+    }
+});
 </script>
 </x-app-layout>

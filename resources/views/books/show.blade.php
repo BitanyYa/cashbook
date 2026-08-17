@@ -291,7 +291,7 @@
 {{-- ══ PAGE HEADER ══ --}}
 <div class="book-page-header">
     <div class="book-page-header-left">
-        <a href="{{ route('books.index') }}" class="book-back-btn">
+        <a href="{{ route('books.index') }}" class="book-back-btn" onclick="if(document.referrer && document.referrer.includes('/books')){ window.location.href = document.referrer; return false; }">
             <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
             </svg>
@@ -884,7 +884,7 @@
         });
 
         // ── reloadTable — called by pill filter onchange ──
-        function reloadTable(resetPage = true) {
+        function reloadTable(resetPage = false) {
             if (dataTable) {
                 if (resetPage) {
                     dataTable.page('first');
@@ -899,7 +899,6 @@
             clearTimeout(searchTimer);
             searchTimer = setTimeout(function() {
                 if (dataTable) {
-                    dataTable.page('first');
                     dataTable.ajax.reload(null, false);
                 }
             }, 150);
@@ -984,6 +983,8 @@
             dataTable = $('#transactions-table').DataTable({
                 processing: false,
                 serverSide: true,
+                stateSave: true,
+                stateDuration: 60 * 60 * 24,
                 dom: 'rt', // Hide default DataTables search, page length and paginator
                 ajax: {
                     url: '{{ route("books.transactions.data", $book) }}',
