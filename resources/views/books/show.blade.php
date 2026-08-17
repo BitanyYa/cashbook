@@ -501,19 +501,13 @@
 </div>
 </div>
 
-{{-- ══ MOBILE BOTTOM BAR WITH FLOATING MIC BUTTON ══ --}}
+{{-- ══ BOTTOM ACTION BAR ══ --}}
 <div class="cash-action-bar">
     <button class="btn-cash-in" onclick="openCashInModal()" style="flex:1;justify-content:center;padding:.875rem;font-size:1rem;border-radius:10px;display:flex;align-items:center;gap:6px;">
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
         </svg>
         Cash In
-    </button>
-    <button type="button" onclick="showNotification('Voice entry feature coming soon!', 'info')"
-            style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(37,99,235,0.35);flex-shrink:0;cursor:pointer;margin-top:-14px;z-index:91;" title="Voice Entry">
-        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
-        </svg>
     </button>
     <button class="btn-cash-out" onclick="openCashOutModal()" style="flex:1;justify-content:center;padding:.875rem;font-size:1rem;border-radius:10px;display:flex;align-items:center;gap:6px;">
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
