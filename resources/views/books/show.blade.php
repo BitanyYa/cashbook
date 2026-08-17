@@ -5,7 +5,13 @@
     $totalIncome  = $allTransactions->where('type', 'income')->sum('amount');
     $totalExpense = $allTransactions->where('type', 'expense')->sum('amount');
     $netBalance   = $totalIncome - $totalExpense;
-@endphp
+@if($bookRole === 'employee')
+<style>
+    .txn-scroll-area { display: none !important; }
+    #mobile-transactions-list { display: flex !important; }
+    #mobile-entry-count-header { display: flex !important; }
+</style>
+@endif
 
 <style>
 /* ════════════════════════════════════════════
@@ -255,7 +261,7 @@
     -webkit-overflow-scrolling: touch;
 }
 @media (max-width: 767px) {
-    .txn-scroll-area { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+    .txn-scroll-area { display: none !important; }
 }
 
 /* ── Fixed bottom bar — mobile only ── */
