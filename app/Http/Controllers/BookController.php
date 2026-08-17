@@ -111,10 +111,18 @@ class BookController extends Controller
 
         $book = Book::create($data + ['business_id' => $business->id]);
 
-        // Add the current user as a primary admin of the newly created book
-        $book->users()->syncWithoutDetaching([
+        // Add the creator as a primary admin of the newly created book
+        $syncUsers = [
             $request->user()->id => ['role' => 'primary_admin'],
-        ]);
+        ];
+
+        // Ensure the business Primary Admin is also attached as primary admin
+        $primaryAdmin = $business->users()->wherePivot('role', 'primary_admin')->first();
+        if ($primaryAdmin) {
+            $syncUsers[$primaryAdmin->id] = ['role' => 'primary_admin'];
+        }
+
+        $book->users()->syncWithoutDetaching($syncUsers);
 
         return redirect()->route('books.index');
     }

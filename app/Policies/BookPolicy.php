@@ -13,9 +13,9 @@ class BookPolicy
     public function view(User $user, Book $book): bool
     {
         $role = $user->getBookRole($book);
+        $businessRole = $user->getBusinessRole($book->business);
 
-        // Primary admins, admins, operators, employees, and viewers can view books they have access to
-        return in_array($role, ['primary_admin', 'admin', 'operator', 'employee', 'viewer']);
+        return $businessRole === 'primary_admin' || in_array($role, ['primary_admin', 'admin', 'operator', 'employee', 'viewer']);
     }
 
     /**
@@ -23,8 +23,10 @@ class BookPolicy
      */
     public function update(User $user, Book $book): bool
     {
-        // Only Primary Admin (owner) can edit cashbook settings
-        return $user->getBookRole($book) === 'primary_admin';
+        $role = $user->getBookRole($book);
+        $businessRole = $user->getBusinessRole($book->business);
+
+        return $businessRole === 'primary_admin' || in_array($role, ['primary_admin', 'admin']);
     }
 
     /**
@@ -32,8 +34,10 @@ class BookPolicy
      */
     public function delete(User $user, Book $book): bool
     {
-        // Only Primary Admin (owner) can delete cashbooks
-        return $user->getBookRole($book) === 'primary_admin';
+        $role = $user->getBookRole($book);
+        $businessRole = $user->getBusinessRole($book->business);
+
+        return $businessRole === 'primary_admin' || in_array($role, ['primary_admin', 'admin']);
     }
 
     /**
@@ -41,8 +45,10 @@ class BookPolicy
      */
     public function manageMembers(User $user, Book $book): bool
     {
-        // Primary Admins and Admins can manage members
-        return in_array($user->getBookRole($book), ['primary_admin', 'admin']);
+        $role = $user->getBookRole($book);
+        $businessRole = $user->getBusinessRole($book->business);
+
+        return $businessRole === 'primary_admin' || in_array($role, ['primary_admin', 'admin']);
     }
 
     /**
@@ -50,7 +56,9 @@ class BookPolicy
      */
     public function transferOwnership(User $user, Book $book): bool
     {
-        // Only Primary Admin (owner) can transfer ownership
-        return $user->getBookRole($book) === 'primary_admin';
+        $role = $user->getBookRole($book);
+        $businessRole = $user->getBusinessRole($book->business);
+
+        return $businessRole === 'primary_admin' || $role === 'primary_admin';
     }
 }
