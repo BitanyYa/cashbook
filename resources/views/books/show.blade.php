@@ -1,11 +1,12 @@
 <x-app-layout>
 @php
-    $userRole = Auth::user()->books()->where('book_id', $book->id)->first()->pivot->role ?? 'employee';
+    $userRole = $bookRole ?? Auth::user()->getBookRole($book) ?? 'employee';
     $allTransactions = $book->transactions;
     $totalIncome  = $allTransactions->where('type', 'income')->sum('amount');
     $totalExpense = $allTransactions->where('type', 'expense')->sum('amount');
     $netBalance   = $totalIncome - $totalExpense;
-@if($bookRole === 'employee')
+@endphp
+@if($userRole === 'employee')
 <style>
     .txn-scroll-area { display: none !important; }
     #mobile-transactions-list { display: flex !important; }
