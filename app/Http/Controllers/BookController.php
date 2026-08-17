@@ -549,16 +549,8 @@ class BookController extends Controller
             $buttons .= '<a href="/transactions/' . $transaction->id . '/receipt" target="_blank" onclick="event.stopPropagation();" style="color: var(--primary-color); text-decoration: none; margin-right: 0.5rem;">Receipt</a>';
         }
 
-        // Edit/Delete buttons - only for primary_admins, or admins for their own transactions
-        $canEdit = false;
-
-        if ($bookRole === 'primary_admin') {
-            // Primary admins can edit/delete any transaction
-            $canEdit = true;
-        } elseif ($bookRole === 'admin' && $transaction->user_id === $user->id) {
-            // Admins can only edit/delete their own transactions
-            $canEdit = true;
-        }
+        // Edit/Delete buttons - for primary_admins and admins
+        $canEdit = in_array($bookRole, ['primary_admin', 'admin']);
         // Employees cannot edit/delete anything
 
         if ($canEdit) {

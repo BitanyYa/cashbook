@@ -267,8 +267,8 @@ class TransactionController extends Controller
 
             $bookRole = $bookUser->pivot->role;
 
-            // Correct combined logic
-            $canEdit = in_array($bookRole, ['primary_admin', 'admin']) || ($bookRole === 'employee' && $transaction->user_id === $user->id);
+            // Book primary_admins and admins can edit any transaction in their book
+            $canEdit = in_array($bookRole, ['primary_admin', 'admin']);
 
             if (!$canEdit) {
                 Log::info('User does not have permission to edit this transaction', [
@@ -440,8 +440,8 @@ class TransactionController extends Controller
 
             $bookRole = $bookUser->pivot->role;
 
-            // Primary admins/admins can delete any transaction; employees can delete only their own
-            $canDelete = in_array($bookRole, ['primary_admin', 'admin']) || ($bookRole === 'employee' && $transaction->user_id === $user->id);
+            // Primary admins/admins can delete any transaction in their assigned books
+            $canDelete = in_array($bookRole, ['primary_admin', 'admin']);
         }
 
         abort_unless($canDelete, 403);
@@ -506,7 +506,7 @@ class TransactionController extends Controller
                 $bookUser = $user->books()->where('books.id', $transaction->book_id)->first();
                 if ($bookUser) {
                     $bookRole = $bookUser->pivot->role;
-                    if (in_array($bookRole, ['primary_admin', 'admin']) || ($bookRole === 'employee' && $transaction->user_id === $user->id)) {
+                    if (in_array($bookRole, ['primary_admin', 'admin'])) {
                         $canDelete = true;
                     }
                 }
