@@ -697,7 +697,36 @@ class TransactionController extends Controller
         }
 
         if (!$fullPath || !file_exists($fullPath)) {
-            abort(404, 'Receipt file not found on server. On cloud hosts like Railway, files uploaded prior to persistent volume mounting are erased when a new deployment container builds.');
+            return response("
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Attachment Storage Reset</title>
+                    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                    <style>
+                        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; color: #334155; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 1.5rem; text-align: center; }
+                        .card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 2rem 1.5rem; max-width: 440px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+                        .icon { width: 48px; height: 48px; background: #fef3c7; color: #d97706; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; }
+                        h2 { font-size: 1.15rem; font-weight: 700; color: #0f172a; margin: 0 0 0.5rem; }
+                        p { font-size: 0.875rem; color: #64748b; line-height: 1.5; margin: 0 0 1rem; }
+                        .btn { display: inline-block; padding: 0.6rem 1.2rem; background: #2563eb; color: #fff; text-decoration: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer; }
+                    </style>
+                </head>
+                <body>
+                    <div class='card'>
+                        <div class='icon'>
+                            <svg width='24' height='24' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'>
+                                <path stroke-linecap='round' stroke-linejoin='round' d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'/>
+                            </svg>
+                        </div>
+                        <h2>Attachment File Reset</h2>
+                        <p>This receipt was uploaded prior to server deployment without a persistent storage volume attached to Railway. The ephemeral container disk was reset when the application was redeployed.</p>
+                        <p style='font-size:0.8rem;color:#94a3b8;margin-bottom:1.5rem;'>To restore this attachment, you can edit this transaction and re-upload the receipt file.</p>
+                        <button onclick='window.close()' class='btn'>Close Tab</button>
+                    </div>
+                </body>
+                </html>
+            ", 404, ['Content-Type' => 'text/html']);
         }
 
         return response()->file($fullPath);
