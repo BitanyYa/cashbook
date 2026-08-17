@@ -574,6 +574,7 @@
                     <div class="detail-item"><label>Amount</label><span id="detail-amount" class="amount"></span></div>
                     <div class="detail-item"><label>Date</label><span id="detail-date"></span></div>
                     <div class="detail-item"><label>Status</label><span id="detail-status" class="badge"></span></div>
+                    <div class="detail-item"><label>Contact Person</label><span id="detail-contact"></span></div>
                     <div class="detail-item"><label>Category</label><span id="detail-category"></span></div>
                     <div class="detail-item"><label>Description</label><span id="detail-description"></span></div>
                 </div>
@@ -1386,6 +1387,12 @@
                 transaction.status === 'approved' ? 'badge-success' :
                 (transaction.status === 'pending' ? 'badge-warning' : 'badge-danger')
             }`;
+
+            // Contact Person
+            const contactElem = document.getElementById('detail-contact');
+            if (contactElem) {
+                contactElem.textContent = transaction.contact_name || '—';
+            }
 
             // Category
             document.getElementById('detail-category').textContent = transaction.category?.name || '—';

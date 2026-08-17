@@ -740,6 +740,7 @@ class TransactionController extends Controller
                 'type' => $transaction->type,
                 'amount' => $transaction->amount,
                 'transaction_date' => $transaction->transaction_date->format('Y-m-d\TH:i'),
+                'contact_name' => $transaction->contact_name,
                 'category' => $transaction->category,
                 'description' => $transaction->description,
                 'status' => $transaction->status,
