@@ -722,36 +722,48 @@ class BookController extends Controller
         $currentUser = $request->user();
         $currentUserRole = $currentUser->getBookRole($book);
 
-        // ONLY Primary Admin can promote or demote members
-        if ($currentUserRole !== 'primary_admin') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Only the Primary Admin can promote or demote members.'
-            ], 403);
+        // Primary Admins and Admins can update member roles
+        if (!in_array($currentUserRole, ['primary_admin', 'admin'])) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only Admins can change member roles.'
+                ], 403);
+            }
+            return back()->with('error', 'Only Admins can change member roles.');
         }
 
         $data = $request->validate([
             'role' => 'required|in:primary_admin,admin,employee'
         ]);
 
-        if ($data['role'] === 'primary_admin') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Use Transfer Ownership to assign a new Primary Admin.'
-            ], 400);
+        if ($data['role'] === 'primary_admin' && $currentUserRole !== 'primary_admin') {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Use Transfer Ownership to assign a new Primary Admin.'
+                ], 400);
+            }
+            return back()->with('error', 'Use Transfer Ownership to assign a new Primary Admin.');
         }
 
         $targetUserRole = $user->getBookRole($book);
-        if ($targetUserRole === 'primary_admin') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot change role of Primary Admin directly. Please transfer ownership first.'
-            ], 403);
+        if ($targetUserRole === 'primary_admin' && $user->id !== $currentUser->id) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot change role of Primary Admin directly. Please transfer ownership first.'
+                ], 403);
+            }
+            return back()->with('error', 'Cannot change role of Primary Admin directly. Please transfer ownership first.');
         }
 
-        $book->users()->updateExistingPivot($user->id, ['role' => $data['role']]);
+        // Sync without detaching ensures pivot role is created or updated
+        $book->users()->syncWithoutDetaching([
+            $user->id => ['role' => $data['role']]
+        ]);
 
-        if ($request->ajax()) {
+        if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'success' => true,
                 'message' => 'User role updated successfully'
