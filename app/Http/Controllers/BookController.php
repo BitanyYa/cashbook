@@ -180,10 +180,8 @@ class BookController extends Controller
         // }
 
         $user = $request->user();
-        $businessRole = $user->businesses()->where('business_id', $business->id)->value('role');
-        $bookUser = $user->books()->where('books.id', $book->id)->first();
-        $bookRole = $bookUser ? $bookUser->pivot->role : null;
-        $effectiveRole = in_array($businessRole, ['primary_admin', 'admin']) ? $businessRole : $bookRole;
+        $bookRole = $user->getBookRole($book);
+        $effectiveRole = $bookRole;
 
         $query = $book->transactions()->with(['category', 'user']);
 
@@ -259,9 +257,8 @@ class BookController extends Controller
 
         // Non-admin users (employee, operator, viewer) only see their own transactions
         $user = $request->user();
-        $businessRole = $user->getBusinessRole($business);
         $bookRole = $user->getBookRole($book);
-        $effectiveRole = in_array($businessRole, ['primary_admin', 'admin']) ? $businessRole : $bookRole;
+        $effectiveRole = $bookRole;
 
         if (!in_array($effectiveRole, ['primary_admin', 'admin'])) {
             $query->where('user_id', $user->id);
@@ -555,15 +552,7 @@ class BookController extends Controller
     {
         $user = $request->user();
         $business = $request->attributes->get('activeBusiness');
-        $businessRole = $user->getBusinessRole($business);
-
-        // Determine user's role for this specific book
-        if (in_array($businessRole, ['primary_admin', 'admin'])) {
-            $bookRole = 'primary_admin'; // Business primary_admins/admins have primary_admin-level access
-        } else {
-            $bookUser = $user->books()->where('books.id', $transaction->book_id)->first();
-            $bookRole = $bookUser ? $bookUser->pivot->role : null;
-        }
+        $bookRole = $user->getBookRole($transaction->book);
 
         $buttons = '';
 

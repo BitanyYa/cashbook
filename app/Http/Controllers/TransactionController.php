@@ -248,37 +248,17 @@ class TransactionController extends Controller
         abort_unless($transaction->business_id === $business->id, 404);
 
         $user = $request->user();
-        $businessRole = $user->getBusinessRole($business);
+        $bookRole = $user->getBookRole($transaction->book);
+        $canEdit = in_array($bookRole, ['primary_admin', 'admin']);
 
-        if (in_array($businessRole, ['primary_admin', 'admin'])) {
-            $canEdit = true;
-        } else {
-            $bookUser = $user->books()->where('books.id', $transaction->book_id)->first();
-            if (!$bookUser) {
-                Log::info('Book Not Found');
-                if ($request->ajax() || $request->wantsJson()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'You do not have access to this book'
-                    ], 403);
-                }
-                abort(403, 'You do not have access to this book');
-            }
-
-            $bookRole = $bookUser->pivot->role;
-
-            // Book primary_admins and admins can edit any transaction in their book
-            $canEdit = in_array($bookRole, ['primary_admin', 'admin']);
-
-            if (!$canEdit) {
-                Log::info('User does not have permission to edit this transaction', [
-                    'user_id' => $user->id,
-                    'transaction_id' => $transaction->id,
-                    'book_id' => $transaction->book_id,
-                    'book_role' => $bookRole,
-                    'business_id' => $business->id
-                ]);
-            }
+        if (!$canEdit) {
+            Log::info('User does not have permission to edit this transaction', [
+                'user_id' => $user->id,
+                'transaction_id' => $transaction->id,
+                'book_id' => $transaction->book_id,
+                'book_role' => $bookRole,
+                'business_id' => $business->id
+            ]);
         }
 
         abort_unless($canEdit, 403);
@@ -312,19 +292,8 @@ class TransactionController extends Controller
         abort_unless($transaction->business_id === $business->id, 404);
 
         $user = $request->user();
-        $businessRole = $user->getBusinessRole($business);
-
-        // Check book-level permissions (Only Admins / Primary Admins can edit posted entries)
-        if (in_array($businessRole, ['primary_admin', 'admin'])) {
-            $canEdit = true;
-        } else {
-            $bookUser = $user->books()->where('books.id', $transaction->book_id)->first();
-            if (!$bookUser) {
-                abort(403, 'You do not have access to this book');
-            }
-            $bookRole = $bookUser->pivot->role;
-            $canEdit = in_array($bookRole, ['primary_admin', 'admin']);
-        }
+        $bookRole = $user->getBookRole($transaction->book);
+        $canEdit = in_array($bookRole, ['primary_admin', 'admin']);
 
         abort_unless($canEdit, 403, 'Employees do not have permission to edit posted transactions.');
 
@@ -424,25 +393,8 @@ class TransactionController extends Controller
         abort_unless($transaction->business_id === $business->id, 404);
 
         $user = $request->user();
-        $businessRole = $user->getBusinessRole($business);
-
-        // Check book-level permissions
-        if (in_array($businessRole, ['primary_admin', 'admin'])) {
-            // Primary admins and admins can delete any transaction
-            $canDelete = true;
-        } else {
-            // For employees, check their role in the specific book
-            $bookUser = $user->books()->where('books.id', $transaction->book_id)->first();
-
-            if (!$bookUser) {
-                abort(403, 'You do not have access to this book');
-            }
-
-            $bookRole = $bookUser->pivot->role;
-
-            // Primary admins/admins can delete any transaction in their assigned books
-            $canDelete = in_array($bookRole, ['primary_admin', 'admin']);
-        }
+        $bookRole = $user->getBookRole($transaction->book);
+        $canDelete = in_array($bookRole, ['primary_admin', 'admin']);
 
         abort_unless($canDelete, 403);
 
@@ -496,21 +448,8 @@ class TransactionController extends Controller
                 ], 403);
             }
 
-            // Check permissions using the same logic as the single destroy method
-            $businessRole = $user->getBusinessRole($business);
-            $canDelete = false;
-
-            if (in_array($businessRole, ['primary_admin', 'admin'])) {
-                $canDelete = true;
-            } else {
-                $bookUser = $user->books()->where('books.id', $transaction->book_id)->first();
-                if ($bookUser) {
-                    $bookRole = $bookUser->pivot->role;
-                    if (in_array($bookRole, ['primary_admin', 'admin'])) {
-                        $canDelete = true;
-                    }
-                }
-            }
+            $bookRole = $user->getBookRole($transaction->book);
+            $canDelete = in_array($bookRole, ['primary_admin', 'admin']);
 
             if (!$canDelete) {
                 return response()->json([

@@ -97,12 +97,17 @@ class User extends Authenticatable
         }
 
         $businessRole = $book->business_id ? $this->getBusinessRole($book->business) : null;
-        if ($businessRole === 'primary_admin') {
-            return 'primary_admin';
+        if (in_array($businessRole, ['primary_admin', 'admin'])) {
+            return $businessRole;
         }
 
-        // Fall back to the explicit book_user pivot role for this specific book.
-        return $this->books()->where('book_id', $book->id)->value('book_user.role');
+        // Fall back to explicit book_user pivot role for this specific book.
+        $pivotRole = \Illuminate\Support\Facades\DB::table('book_user')
+            ->where('book_id', $book->id)
+            ->where('user_id', $this->id)
+            ->value('role');
+
+        return $pivotRole ?? $businessRole ?? 'employee';
     }
 
     public function canViewBook(?Book $book): bool
