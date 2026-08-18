@@ -46,20 +46,20 @@ class BookController extends Controller
         }
 
         // Apply Sorting
-        $sort = $request->get('sort', 'updated_at_desc');
+        $sort = $request->input('sort') ?: $request->query('sort') ?: 'updated_at_desc';
         switch ($sort) {
             case 'name_asc':
-                $query->orderBy('name', 'asc');
+                $query->orderBy('name', 'asc')->orderBy('id', 'asc');
                 break;
             case 'name_desc':
-                $query->orderBy('name', 'desc');
+                $query->orderBy('name', 'desc')->orderBy('id', 'desc');
                 break;
             case 'updated_at_asc':
-                $query->orderBy('updated_at', 'asc');
+                $query->orderBy('updated_at', 'asc')->orderBy('id', 'asc');
                 break;
             case 'updated_at_desc':
             default:
-                $query->orderBy('updated_at', 'desc');
+                $query->orderBy('updated_at', 'desc')->orderBy('id', 'desc');
                 break;
         }
 
@@ -72,7 +72,7 @@ class BookController extends Controller
             return $book;
         });
 
-        if ($request->ajax()) {
+        if ($request->ajax() || $request->wantsJson() || $request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
             return response()->json([
                 'success' => true,
                 'books' => $books->map(function($book) {
@@ -87,13 +87,13 @@ class BookController extends Controller
                         'balance_formatted' => number_format(abs($balance)),
                         'balance_color' => $balance >= 0 ? '#10b981' : '#ef4444',
                         'members_count' => $book->users()->count(),
-                        'updated_human' => $book->updated_at->diffForHumans(),
+                        'updated_human' => $book->updated_at->format('M d Y'),
                         'user_has_access' => $book->user_has_access,
                         'url' => route('books.show', $book),
                         'edit_url' => route('books.edit', $book),
                         'users_url' => route('books.users', $book),
                     ];
-                }),
+                })->values(),
                 'pagination' => (string) $books->links()
             ]);
         }
