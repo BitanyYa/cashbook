@@ -711,8 +711,15 @@ class TransactionController extends Controller
                 ];
             });
 
+        $userBookRole = $user->getBookRole($transaction->book);
+        $canEdit = in_array($userBookRole, ['primary_admin', 'admin']);
+        $canDelete = in_array($userBookRole, ['primary_admin', 'admin']);
+
         return response()->json([
             'success' => true,
+            'user_role' => $userBookRole,
+            'can_edit' => $canEdit,
+            'can_delete' => $canDelete,
             'transaction' => [
                 'id' => $transaction->id,
                 'type' => $transaction->type,

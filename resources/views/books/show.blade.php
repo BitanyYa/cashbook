@@ -1428,16 +1428,20 @@
             populateActivityTimeline(activities);
 
             // Action buttons — Only Primary Admins & Admins can edit or delete posted transactions
-            const bookRole = '<?php echo $bookRole; ?>';
+            const userRole = data.user_role || '<?php echo $bookRole; ?>';
+            const canEdit = data.can_edit !== undefined ? data.can_edit : ['primary_admin', 'admin'].includes(userRole);
+            const canDelete = data.can_delete !== undefined ? data.can_delete : ['primary_admin', 'admin'].includes(userRole);
+
             const editBtn = document.getElementById('edit-transaction-btn');
             const deleteBtn = document.getElementById('delete-transaction-btn');
 
-            if (['primary_admin', 'admin'].includes(bookRole)) {
-                if (editBtn) { editBtn.style.display = 'inline-block'; editBtn.onclick = () => editTransactionFromDetail(); }
-                if (deleteBtn) { deleteBtn.style.display = 'inline-block'; deleteBtn.onclick = () => deleteTransactionFromDetail(); }
-            } else {
-                if (editBtn) editBtn.style.display = 'none';
-                if (deleteBtn) deleteBtn.style.display = 'none';
+            if (editBtn) {
+                editBtn.style.display = canEdit ? 'inline-block' : 'none';
+                if (canEdit) editBtn.onclick = () => editTransactionFromDetail();
+            }
+            if (deleteBtn) {
+                deleteBtn.style.display = canDelete ? 'inline-block' : 'none';
+                if (canDelete) deleteBtn.onclick = () => deleteTransactionFromDetail();
             }
 
         }
