@@ -687,13 +687,8 @@ class TransactionController extends Controller
         abort_unless($transaction->business_id === $business->id, 404);
 
         $user = $request->user();
-        $role = $user->getBusinessRole($business);
-
-        // Check permissions
-        if ($role === 'employee') {
-            $assigned = $user->belongsToMany(Book::class, 'book_user')->where('books.id', $transaction->book_id)->exists();
-            abort_unless($assigned, 403);
-        }
+        $userBookRole = $user->getBookRole($transaction->book);
+        abort_unless($userBookRole !== null, 403, 'Unauthorized access to transaction');
 
         // Get activity logs for this transaction
         $activities = ActivityLog::where('subject_type', Transaction::class)
@@ -702,16 +697,16 @@ class TransactionController extends Controller
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($log) {
+                $details = is_array($log->details) ? $log->details : (json_decode($log->details ?? '', true) ?: []);
                 return [
                     'type' => $this->getActivityType($log->action),
                     'title' => $this->getActivityTitle($log->action),
-                    'description' => $this->getActivityDescription($log->action, $log->details),
+                    'description' => $this->getActivityDescription($log->action, $details),
                     'user_name' => $log->user->name ?? 'System',
-                    'created_at' => $log->created_at->toISOString()
+                    'created_at' => $log->created_at ? $log->created_at->toISOString() : now()->toISOString()
                 ];
             });
 
-        $userBookRole = $user->getBookRole($transaction->book);
         $canEdit = in_array($userBookRole, ['primary_admin', 'admin']);
         $canDelete = in_array($userBookRole, ['primary_admin', 'admin']);
 

@@ -1347,7 +1347,7 @@
             })
             .then(data => {
                 if (data.success) {
-                    populateTransactionDetail(data.transaction, data.activities);
+                    populateTransactionDetail(data.transaction, data.activities, data);
                     openTransactionDetailModal();
                 } else {
                     showNotification('Error loading transaction details: ' + (data.message || 'Unknown error'), 'error');
@@ -1359,7 +1359,7 @@
         }
 
         // Populate transaction detail modal
-        function populateTransactionDetail(transaction, activities) {
+        function populateTransactionDetail(transaction, activities, data = {}) {
             // Set basic info
             document.getElementById('detail-title').textContent = `Transaction #${transaction.id}`;
 
