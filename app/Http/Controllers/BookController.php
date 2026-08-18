@@ -47,6 +47,7 @@ class BookController extends Controller
 
         // Apply Sorting
         $sort = $request->input('sort') ?: $request->query('sort') ?: 'updated_at_desc';
+        $query->reorder();
         switch ($sort) {
             case 'name_asc':
                 $query->orderBy('name', 'asc')->orderBy('id', 'asc');
