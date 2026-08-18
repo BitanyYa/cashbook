@@ -27,7 +27,7 @@ class BookController extends Controller
 
         $query = Book::where('business_id', $business->id);
 
-        if ($role !== 'primary_admin') {
+        if (!in_array($role, ['primary_admin', 'admin'])) {
             // Book admins and employees only see books they are explicitly assigned to
             $assignedBookIds = $user->books()->where('business_id', $business->id)->pluck('books.id');
             $query->whereIn('id', $assignedBookIds);
@@ -35,10 +35,13 @@ class BookController extends Controller
 
         // Apply Search Filter
         if ($request->filled('q')) {
-            $search = $request->get('q');
+            $search = trim($request->get('q'));
             $query->where(function($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhereHas('users', function($userQuery) use ($search) {
+                      $userQuery->where('name', 'like', "%{$search}%");
+                  });
             });
         }
 
@@ -204,10 +207,18 @@ class BookController extends Controller
             $query->where('mode', $request->mode);
         }
         if ($request->filled('search')) {
-            $search = $request->search;
+            $search = trim($request->search);
             $query->where(function($q) use ($search) {
                 $q->where('description', 'like', "%{$search}%")
-                  ->orWhere('amount', 'like', "%{$search}%");
+                  ->orWhere('contact_name', 'like', "%{$search}%")
+                  ->orWhere('mode', 'like', "%{$search}%")
+                  ->orWhere('amount', 'like', "%{$search}%")
+                  ->orWhereHas('category', function($catQ) use ($search) {
+                      $catQ->where('name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('user', function($userQ) use ($search) {
+                      $userQ->where('name', 'like', "%{$search}%");
+                  });
             });
         }
 
@@ -280,11 +291,20 @@ class BookController extends Controller
             $query->where('contact_name', $request->contact);
         }
 
-        if ($request->filled('search')) {
-            $search = $request->search;
+        $searchVal = $request->input('search.value') ?: $request->input('search');
+        if (!empty($searchVal) && is_string($searchVal)) {
+            $search = trim($searchVal);
             $query->where(function($q) use ($search) {
                 $q->where('description', 'like', "%{$search}%")
-                  ->orWhere('amount', 'like', "%{$search}%");
+                  ->orWhere('contact_name', 'like', "%{$search}%")
+                  ->orWhere('mode', 'like', "%{$search}%")
+                  ->orWhere('amount', 'like', "%{$search}%")
+                  ->orWhereHas('category', function($catQ) use ($search) {
+                      $catQ->where('name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('user', function($userQ) use ($search) {
+                      $userQ->where('name', 'like', "%{$search}%");
+                  });
             });
         }
 
