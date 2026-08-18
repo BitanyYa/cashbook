@@ -206,11 +206,10 @@
                 </svg>
                 <input id="bookSearchInput" name="q" type="text" value="{{ request('q') }}"
                        placeholder="Search by book name..."
-                       oninput="debouncedSearch()"
                        class="books-search">
             </div>
             <div style="display:flex;align-items:center;gap:.5rem;">
-                <select name="sort" id="bookSort" onchange="fetchBooks(1)"
+                <select name="sort" id="bookSort" onchange="this.form.submit()"
                         style="padding:6px 28px 6px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.8125rem;color:#334155;background:#fff;appearance:none;outline:none;cursor:pointer;font-family:inherit;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E\");background-position:right .4rem center;background-repeat:no-repeat;background-size:1.25em;">
                     <option value="updated_at_desc" {{ (request('sort')=='updated_at_desc' || (!request('sort') && ($sort ?? '')=='updated_at_desc'))?'selected':'' }}>Last Updated</option>
                     <option value="name_asc"        {{ (request('sort')=='name_asc'        || (!request('sort') && ($sort ?? '')=='name_asc'))?'selected':'' }}>Name A–Z</option>
