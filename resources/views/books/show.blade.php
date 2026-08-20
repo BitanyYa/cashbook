@@ -359,6 +359,10 @@
 {{-- ══ FILTER PILLS & SEARCH (Hidden for Employees) ══ --}}
 @if($bookRole !== 'employee')
 <div class="filter-pills-row">
+    <span class="fpill" style="display:inline-flex;align-items:center;gap:6px;padding:0.2rem 0.65rem;">
+        <span style="font-size:0.75rem;color:var(--gray-600);font-weight:600;">Date:</span>
+        <input type="date" id="filter-date" onchange="reloadTable()" style="border:none;background:transparent;font-size:0.78rem;outline:none;color:var(--gray-800);cursor:pointer;font-family:inherit;" />
+    </span>
     <span class="fpill"><select id="filter-duration" onchange="reloadTable()">
         <option value="">Duration: All Time</option>
         <option value="today">Today</option>
@@ -939,7 +943,7 @@
         }
 
         function clearAllFilters() {
-            ['filter-duration', 'filter-type', 'filter-contact', 'filter-member', 'filter-mode', 'filter-category', 'filter-search'].forEach(function(id) {
+            ['filter-date', 'filter-duration', 'filter-type', 'filter-contact', 'filter-member', 'filter-mode', 'filter-category', 'filter-search'].forEach(function(id) {
                 const el = document.getElementById(id);
                 if (el) el.value = '';
             });
@@ -1024,6 +1028,7 @@
                     url: '{{ route("books.transactions.data", $book) }}',
                     type: 'GET',
                     data: function(d) {
+                        d.date     = document.getElementById('filter-date')?.value     || '';
                         d.duration = document.getElementById('filter-duration')?.value || '';
                         d.type     = document.getElementById('filter-type')?.value     || '';
                         d.contact  = document.getElementById('filter-contact')?.value  || '';
@@ -1515,6 +1520,7 @@
         // Update summary cards based on filters
         function updateSummaryCards() {
             const filters = {
+                date:     document.getElementById('filter-date')?.value     || '',
                 duration: document.getElementById('filter-duration')?.value || '',
                 type:     document.getElementById('filter-type')?.value     || '',
                 member:   document.getElementById('filter-member')?.value   || '',
