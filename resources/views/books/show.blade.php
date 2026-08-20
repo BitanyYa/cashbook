@@ -661,7 +661,8 @@
             </div>
             <div style="display:flex;justify-content:flex-end;gap:.625rem;border-top:1px solid var(--gray-200);padding-top:.875rem;position:sticky;bottom:0;background:#fff;">
                 <button type="button" @click="$dispatch('close-modal','add-transaction')" class="btn btn-secondary">Cancel</button>
-                <button type="submit" id="submit-btn" class="btn btn-primary">Save</button>
+                <button type="submit" onclick="this.form.dataset.action='save_and_add'" id="add-save-another-btn" class="btn btn-secondary" style="background:#f1f5f9;color:#0f172a;border:1px solid #cbd5e1;font-weight:600;">Save &amp; Add Another</button>
+                <button type="submit" onclick="this.form.dataset.action='save'" id="submit-btn" class="btn btn-primary">Save</button>
             </div>
         </form>
     </div>
@@ -764,7 +765,8 @@
             </div>
             <div style="display:flex;justify-content:flex-end;gap:.625rem;border-top:1px solid var(--gray-200);padding-top:.875rem;position:sticky;bottom:0;background:#fff;">
                 <button type="button" @click="$dispatch('close-modal','edit-transaction')" class="btn btn-secondary">Cancel</button>
-                <button type="submit" class="btn btn-primary">Update</button>
+                <button type="submit" onclick="this.form.dataset.action='save_and_add'" id="edit-save-add-btn" class="btn btn-secondary" style="background:#f1f5f9;color:#0f172a;border:1px solid #cbd5e1;font-weight:600;">Save &amp; Add New</button>
+                <button type="submit" onclick="this.form.dataset.action='update'" id="edit-submit-btn" class="btn btn-primary">Update</button>
             </div>
         </form>
     </div>
@@ -1668,7 +1670,8 @@
             e.preventDefault();
 
             const formData = new FormData(this);
-            const submitBtn = document.getElementById('submit-btn');
+            const actionType = this.dataset.action || 'save';
+            const submitBtn = actionType === 'save_and_add' ? document.getElementById('add-save-another-btn') : document.getElementById('submit-btn');
             const originalText = submitBtn.textContent;
 
             submitBtn.textContent = 'Saving...';
@@ -1685,20 +1688,25 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Close modal using Alpine.js dispatch
-                    window.dispatchEvent(new CustomEvent('close-modal', {
-                        detail: 'add-transaction'
-                    }));
+                    const currentType = document.getElementById('type').value;
 
                     // Reset form & staged files
                     this.reset();
                     resetStagedFiles('add');
+                    document.getElementById('type').value = currentType;
 
-                    // Show success message
-                    showNotification('Transaction added successfully!', 'success');
+                    if (actionType !== 'save_and_add') {
+                        // Close modal using Alpine.js dispatch
+                        window.dispatchEvent(new CustomEvent('close-modal', {
+                            detail: 'add-transaction'
+                        }));
+                        showNotification('Transaction added successfully!', 'success');
+                    } else {
+                        showNotification('Transaction added! Ready for next entry.', 'success');
+                    }
 
                     // Reload DataTable to show new transaction
-                    dataTable.ajax.reload();
+                    dataTable.ajax.reload(null, false);
 
                     // Update summary cards
                     updateSummaryCards();
@@ -1712,6 +1720,75 @@
             .finally(() => {
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
+                delete this.dataset.action;
+            });
+        });
+
+        // Edit transaction via AJAX
+        document.getElementById('edit-transaction-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const transactionId = document.getElementById('edit_transaction_id').value;
+            if (!transactionId) {
+                showNotification('Missing transaction ID', 'error');
+                return;
+            }
+
+            const formData = new FormData(this);
+            const actionType = this.dataset.action || 'update';
+            formData.append('action', actionType);
+
+            const submitBtn = actionType === 'save_and_add' ? document.getElementById('edit-save-add-btn') : document.getElementById('edit-submit-btn');
+            const originalText = submitBtn.textContent;
+
+            submitBtn.textContent = 'Saving...';
+            submitBtn.disabled = true;
+
+            fetch(`/transactions/${transactionId}`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close edit modal
+                    window.dispatchEvent(new CustomEvent('close-modal', {
+                        detail: 'edit-transaction'
+                    }));
+
+                    // Reload table & summary
+                    dataTable.ajax.reload(null, false);
+                    updateSummaryCards();
+
+                    if (actionType === 'save_and_add') {
+                        // Immediately open Add Transaction modal pre-filled for this book
+                        const addForm = document.getElementById('transaction-form');
+                        if (addForm) {
+                            addForm.reset();
+                            resetStagedFiles('add');
+                            document.getElementById('type').value = document.getElementById('edit_type').value || 'income';
+                        }
+                        window.dispatchEvent(new CustomEvent('open-modal', { detail: 'add-transaction' }));
+                        showNotification('Transaction updated! Ready to add new entry.', 'success');
+                    } else {
+                        showNotification('Transaction updated successfully!', 'success');
+                    }
+                } else {
+                    showNotification(data.message || 'Error updating transaction', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating transaction:', error);
+                showNotification('Error updating transaction', 'error');
+            })
+            .finally(() => {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                delete this.dataset.action;
             });
         });
 

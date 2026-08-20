@@ -380,11 +380,21 @@ class TransactionController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Transaction updated successfully',
+                'action' => $request->input('action', 'update'),
                 'transaction' => $transaction->load(['category', 'book'])
             ]);
         }
 
-        return redirect()->route('transactions.index');
+        if ($request->input('action') === 'save_and_add') {
+            return redirect()->route('transactions.create', ['book' => $transaction->book_id])
+                ->with('success', 'Transaction updated successfully! Ready to add new entry.');
+        }
+
+        if ($request->filled('return_to')) {
+            return redirect($request->input('return_to'))->with('success', 'Transaction updated successfully!');
+        }
+
+        return redirect()->route('books.show', $transaction->book_id)->with('success', 'Transaction updated successfully!');
     }
 
     public function destroy(Request $request, Transaction $transaction)
