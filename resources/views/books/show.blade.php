@@ -359,7 +359,7 @@
 {{-- ══ FILTER PILLS & SEARCH (Hidden for Employees) ══ --}}
 @if($bookRole !== 'employee')
 <div class="filter-pills-row">
-    <span class="fpill" style="display:inline-flex;align-items:center;gap:6px;">
+    <span class="fpill" style="position:relative;">
         <select id="filter-duration" onchange="handleDurationChange(this.value)">
             <option value="">Duration: All Time</option>
             <option value="today">Today</option>
@@ -369,9 +369,9 @@
             <option value="this_month">This Month</option>
             <option value="last_month">Last Month</option>
             <option value="this_year">This Year</option>
-            <option value="single_date">Single Date</option>
+            <option value="single_date" id="single-date-opt">Single Date</option>
         </select>
-        <input type="date" id="filter-date" onchange="reloadTable()" style="display:none;border:none;background:transparent;font-size:0.78rem;outline:none;color:var(--gray-800);cursor:pointer;font-family:inherit;" />
+        <input type="date" id="filter-date" onchange="handleSingleDateSelected(this.value)" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;left:0;bottom:0;" />
     </span>
     <span class="fpill"><select id="filter-type" onchange="reloadTable()">
         <option value="">Types: All</option>
@@ -942,23 +942,42 @@
 
         function handleDurationChange(val) {
             const dateInput = document.getElementById('filter-date');
+            const singleOpt = document.getElementById('single-date-opt');
+
             if (val === 'single_date') {
                 if (dateInput) {
-                    dateInput.style.display = 'inline-block';
                     if (typeof dateInput.showPicker === 'function') {
-                        try { dateInput.showPicker(); } catch(e) {}
+                        try { dateInput.showPicker(); } catch(e) { dateInput.focus(); }
                     } else {
                         dateInput.focus();
                         dateInput.click();
                     }
                 }
             } else {
-                if (dateInput) {
-                    dateInput.value = '';
-                    dateInput.style.display = 'none';
-                }
+                if (dateInput) dateInput.value = '';
+                if (singleOpt) singleOpt.textContent = 'Single Date';
                 reloadTable();
             }
+        }
+
+        function handleSingleDateSelected(dateVal) {
+            const singleOpt = document.getElementById('single-date-opt');
+            const durationSelect = document.getElementById('filter-duration');
+
+            if (dateVal) {
+                const parts = dateVal.split('-');
+                if (parts.length === 3) {
+                    const d = new Date(parts[0], parts[1] - 1, parts[2]);
+                    const formatted = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                    if (singleOpt) singleOpt.textContent = `📅 ${formatted}`;
+                } else {
+                    if (singleOpt) singleOpt.textContent = `📅 ${dateVal}`;
+                }
+                if (durationSelect) durationSelect.value = 'single_date';
+            } else {
+                if (singleOpt) singleOpt.textContent = 'Single Date';
+            }
+            reloadTable();
         }
 
         function clearAllFilters() {
@@ -966,8 +985,8 @@
                 const el = document.getElementById(id);
                 if (el) el.value = '';
             });
-            const dateInput = document.getElementById('filter-date');
-            if (dateInput) dateInput.style.display = 'none';
+            const singleOpt = document.getElementById('single-date-opt');
+            if (singleOpt) singleOpt.textContent = 'Single Date';
             reloadTable(true);
         }
 
