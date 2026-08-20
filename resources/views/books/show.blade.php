@@ -359,20 +359,20 @@
 {{-- ══ FILTER PILLS & SEARCH (Hidden for Employees) ══ --}}
 @if($bookRole !== 'employee')
 <div class="filter-pills-row">
-    <span class="fpill" style="display:inline-flex;align-items:center;gap:6px;padding:0.2rem 0.65rem;">
-        <span style="font-size:0.75rem;color:var(--gray-600);font-weight:600;">Date:</span>
-        <input type="date" id="filter-date" onchange="reloadTable()" style="border:none;background:transparent;font-size:0.78rem;outline:none;color:var(--gray-800);cursor:pointer;font-family:inherit;" />
+    <span class="fpill" style="display:inline-flex;align-items:center;gap:6px;">
+        <select id="filter-duration" onchange="handleDurationChange(this.value)">
+            <option value="">Duration: All Time</option>
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="this_week">This Week</option>
+            <option value="last_week">Last Week</option>
+            <option value="this_month">This Month</option>
+            <option value="last_month">Last Month</option>
+            <option value="this_year">This Year</option>
+            <option value="single_date">Single Date</option>
+        </select>
+        <input type="date" id="filter-date" onchange="reloadTable()" style="display:none;border:none;background:transparent;font-size:0.78rem;outline:none;color:var(--gray-800);cursor:pointer;font-family:inherit;" />
     </span>
-    <span class="fpill"><select id="filter-duration" onchange="reloadTable()">
-        <option value="">Duration: All Time</option>
-        <option value="today">Today</option>
-        <option value="yesterday">Yesterday</option>
-        <option value="this_week">This Week</option>
-        <option value="last_week">Last Week</option>
-        <option value="this_month">This Month</option>
-        <option value="last_month">Last Month</option>
-        <option value="this_year">This Year</option>
-    </select></span>
     <span class="fpill"><select id="filter-type" onchange="reloadTable()">
         <option value="">Types: All</option>
         <option value="income">Cash In</option>
@@ -942,11 +942,34 @@
             }, 150);
         }
 
+        function handleDurationChange(val) {
+            const dateInput = document.getElementById('filter-date');
+            if (val === 'single_date') {
+                if (dateInput) {
+                    dateInput.style.display = 'inline-block';
+                    if (typeof dateInput.showPicker === 'function') {
+                        try { dateInput.showPicker(); } catch(e) {}
+                    } else {
+                        dateInput.focus();
+                        dateInput.click();
+                    }
+                }
+            } else {
+                if (dateInput) {
+                    dateInput.value = '';
+                    dateInput.style.display = 'none';
+                }
+                reloadTable();
+            }
+        }
+
         function clearAllFilters() {
             ['filter-date', 'filter-duration', 'filter-type', 'filter-contact', 'filter-member', 'filter-mode', 'filter-category', 'filter-search'].forEach(function(id) {
                 const el = document.getElementById(id);
                 if (el) el.value = '';
             });
+            const dateInput = document.getElementById('filter-date');
+            if (dateInput) dateInput.style.display = 'none';
             reloadTable(true);
         }
 
