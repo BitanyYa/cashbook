@@ -392,8 +392,13 @@
     </select></span>
     <span class="fpill"><select id="filter-mode" onchange="reloadTable()">
         <option value="">Payment Modes: All</option>
+        <option value="Cash">Cash</option>
+        <option value="Bank">Bank</option>
+        <option value="Online">Online</option>
         @foreach($modes as $mode)
-            <option value="{{ $mode }}">{{ strtoupper($mode) }}</option>
+            @if(!in_array(strtolower($mode), ['cash', 'bank', 'online']))
+                <option value="{{ $mode }}">{{ ucfirst($mode) }}</option>
+            @endif
         @endforeach
     </select></span>
 </div>
@@ -645,7 +650,11 @@
             </div>
             <div class="form-group" style="margin-bottom:0;">
                 <label for="mode" class="form-label">Payment Mode</label>
-                <input id="mode" name="mode" type="text" class="form-input" placeholder="e.g. Cash, Bank…" />
+                <select id="mode" name="mode" class="form-select">
+                    <option value="Cash" selected>Cash</option>
+                    <option value="Bank">Bank</option>
+                    <option value="Online">Online</option>
+                </select>
             </div>
             <div class="form-group" style="margin-bottom:0;">
                 <label for="description" class="form-label">Description</label>
@@ -730,25 +739,14 @@
                     </div>
                     <input type="hidden" id="edit_new_category" name="new_category" value="">
                 </div>
-                <div class="form-group" style="margin-bottom:0;">
-                    <label class="form-label">Payment Mode</label>
-                    <div style="position:relative;">
-                        <div style="display:flex;align-items:center;border:1.5px solid var(--gray-300);border-radius:6px;background:#fff;overflow:hidden;">
-                            <input id="edit_mode_display" type="text" style="flex:1;padding:.4rem .55rem;border:none;outline:none;font-size:.78rem;color:var(--gray-900);background:transparent;font-family:inherit;" placeholder="Select mode" autocomplete="off" oninput="filterEditModes(this.value)" />
-                            <button type="button" onclick="document.getElementById('edit_mode_display').value='';document.getElementById('edit_mode').value=''" style="padding:0 .35rem;border:none;background:transparent;cursor:pointer;color:var(--gray-400);font-size:.85rem;">✕</button>
-                            <div style="width:1px;height:16px;background:var(--gray-200);"></div>
-                            <button type="button" onclick="toggleEditModeDropdown()" style="padding:0 .45rem;border:none;background:transparent;cursor:pointer;color:var(--gray-500);">
-                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
-                            </button>
-                        </div>
-                        <input type="hidden" id="edit_mode" name="mode" value="">
-                        <div id="edit_mode_dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:200;background:#fff;border:1px solid var(--gray-300);border-top:none;border-radius:0 0 6px 6px;max-height:130px;overflow-y:auto;box-shadow:0 4px 8px rgba(0,0,0,.08);">
-                            @foreach($modes as $m)
-                            <div onclick="selectEditMode('{{ $m }}')" data-mode="{{ $m }}" style="padding:.4rem .6rem;font-size:.78rem;color:var(--gray-800);cursor:pointer;" onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background='#fff'">{{ ucfirst($m) }}</div>
-                            @endforeach
-                        </div>
-                    </div>
-                </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label for="edit_mode" class="form-label">Payment Mode</label>
+                <select id="edit_mode" name="mode" class="form-select">
+                    <option value="Cash">Cash</option>
+                    <option value="Bank">Bank</option>
+                    <option value="Online">Online</option>
+                </select>
+            </div>
             </div>
             <div class="form-group" style="margin-bottom:0;">
                 <label for="edit_description" class="form-label">Remarks</label>
@@ -1875,14 +1873,12 @@
                         }
                     }
 
-                    // Mode — set hidden value and display text
-                    const modeVal = transaction.mode || '';
-                    document.getElementById('edit_mode').value = modeVal;
-                    const modeDisplay = document.getElementById('edit_mode_display');
-                    if (modeDisplay) {
-                        modeDisplay.value = modeVal
-                            ? modeVal.charAt(0).toUpperCase() + modeVal.slice(1)
-                            : '';
+                    // Mode — set select dropdown value
+                    const rawMode = transaction.mode || 'Cash';
+                    const formattedMode = rawMode.charAt(0).toUpperCase() + rawMode.slice(1).toLowerCase();
+                    const editModeSelect = document.getElementById('edit_mode');
+                    if (editModeSelect) {
+                        editModeSelect.value = formattedMode;
                     }
 
                     // Reset staged edit files

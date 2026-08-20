@@ -54,17 +54,29 @@
                     </div>
                 </div>
 
-                <div>
-                    <x-input-label for="category_id" value="Category (Optional)" />
-                    <select id="category_id" name="category_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        <option value="">Select a category</option>
-                        @foreach($categories as $category)
-                            <option value="{{ $category->id }}" @selected(old('category_id') == $category->id)>
-                                {{ $category->name }} ({{ ucfirst($category->type) }})
-                            </option>
-                        @endforeach
-                    </select>
-                    <x-input-error :messages="$errors->get('category_id')" class="mt-2" />
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <x-input-label for="mode" value="Payment Mode" />
+                        <select id="mode" name="mode" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="Cash" @selected(old('mode', 'Cash') === 'Cash')>Cash</option>
+                            <option value="Bank" @selected(old('mode') === 'Bank')>Bank</option>
+                            <option value="Online" @selected(old('mode') === 'Online')>Online</option>
+                        </select>
+                        <x-input-error :messages="$errors->get('mode')" class="mt-2" />
+                    </div>
+
+                    <div>
+                        <x-input-label for="category_id" value="Category (Optional)" />
+                        <select id="category_id" name="category_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">Select a category</option>
+                            @foreach($categories as $category)
+                                <option value="{{ $category->id }}" @selected(old('category_id') == $category->id)>
+                                    {{ $category->name }} ({{ ucfirst($category->type) }})
+                                </option>
+                            @endforeach
+                        </select>
+                        <x-input-error :messages="$errors->get('category_id')" class="mt-2" />
+                    </div>
                 </div>
 
                 <div>
