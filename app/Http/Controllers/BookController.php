@@ -190,7 +190,13 @@ class BookController extends Controller
             $query->where('user_id', $user->id);
         }
 
-        if ($request->filled('date')) {
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereBetween(\Illuminate\Support\Facades\DB::raw('DATE(transaction_date)'), [$request->start_date, $request->end_date]);
+        } elseif ($request->filled('start_date')) {
+            $query->whereDate('transaction_date', '>=', $request->start_date);
+        } elseif ($request->filled('end_date')) {
+            $query->whereDate('transaction_date', '<=', $request->end_date);
+        } elseif ($request->filled('date')) {
             $query->whereDate('transaction_date', $request->date);
         } elseif ($request->filled('duration')) {
             $this->applyDurationFilter($query, $request->duration);
@@ -268,7 +274,13 @@ class BookController extends Controller
         }
 
         // Apply filters
-        if ($request->filled('date')) {
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereBetween(\Illuminate\Support\Facades\DB::raw('DATE(transaction_date)'), [$request->start_date, $request->end_date]);
+        } elseif ($request->filled('start_date')) {
+            $query->whereDate('transaction_date', '>=', $request->start_date);
+        } elseif ($request->filled('end_date')) {
+            $query->whereDate('transaction_date', '<=', $request->end_date);
+        } elseif ($request->filled('date')) {
             $query->whereDate('transaction_date', $request->date);
         } elseif ($request->filled('duration')) {
             $this->applyDurationFilter($query, $request->duration);
@@ -484,7 +496,13 @@ class BookController extends Controller
         }
 
         // Apply the same filters as in transactionsData
-        if ($request->filled('date')) {
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereBetween(\Illuminate\Support\Facades\DB::raw('DATE(transaction_date)'), [$request->start_date, $request->end_date]);
+        } elseif ($request->filled('start_date')) {
+            $query->whereDate('transaction_date', '>=', $request->start_date);
+        } elseif ($request->filled('end_date')) {
+            $query->whereDate('transaction_date', '<=', $request->end_date);
+        } elseif ($request->filled('date')) {
             $query->whereDate('transaction_date', $request->date);
         } elseif ($request->filled('duration')) {
             $this->applyDurationFilter($query, $request->duration);

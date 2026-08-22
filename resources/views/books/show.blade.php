@@ -370,8 +370,11 @@
             <option value="last_month">Last Month</option>
             <option value="this_year">This Year</option>
             <option value="single_date" id="single-date-opt">Single Date</option>
+            <option value="custom_range" id="custom-range-opt">Custom Range (Start &amp; End)</option>
         </select>
         <input type="date" id="filter-date" onchange="handleSingleDateSelected(this.value)" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;left:0;bottom:0;" />
+        <input type="hidden" id="filter-start-date" value="" />
+        <input type="hidden" id="filter-end-date" value="" />
     </span>
     <span class="fpill"><select id="filter-type" onchange="reloadTable()">
         <option value="">Types: All</option>
@@ -605,6 +608,27 @@
         </div>
     </div>
 </div>
+
+{{-- ══ CUSTOM DATE RANGE MODAL ══ --}}
+<x-modal name="custom-date-range" :show="false" class="modal-hidden">
+    <div style="padding:1.5rem;max-width:400px;margin:0 auto;">
+        <h3 style="font-size:1.0625rem;font-weight:700;color:var(--gray-900);margin:0 0 1rem;">Filter by Date Range</h3>
+        <form id="custom-date-range-form" onsubmit="applyCustomDateRange(event)" style="display:flex;flex-direction:column;gap:1rem;">
+            <div>
+                <label for="filter-start-date-input" class="form-label" style="font-weight:600;font-size:0.8125rem;">Start Date <span style="color:var(--danger-color);">*</span></label>
+                <input type="date" id="filter-start-date-input" class="form-input" required />
+            </div>
+            <div>
+                <label for="filter-end-date-input" class="form-label" style="font-weight:600;font-size:0.8125rem;">End Date <span style="color:var(--danger-color);">*</span></label>
+                <input type="date" id="filter-end-date-input" class="form-input" required />
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:0.625rem;margin-top:0.5rem;">
+                <button type="button" onclick="closeCustomDateRangeModal()" class="btn btn-secondary">Cancel</button>
+                <button type="submit" class="btn btn-primary">Apply Filter</button>
+            </div>
+        </form>
+    </div>
+</x-modal>
 
 {{-- ══ ADD TRANSACTION MODAL ══ --}}
 <x-modal name="add-transaction" :show="false" class="modal-hidden">
@@ -942,9 +966,16 @@
 
         function handleDurationChange(val) {
             const dateInput = document.getElementById('filter-date');
+            const startDateInput = document.getElementById('filter-start-date');
+            const endDateInput = document.getElementById('filter-end-date');
             const singleOpt = document.getElementById('single-date-opt');
+            const rangeOpt = document.getElementById('custom-range-opt');
 
             if (val === 'single_date') {
+                if (startDateInput) startDateInput.value = '';
+                if (endDateInput) endDateInput.value = '';
+                if (rangeOpt) rangeOpt.textContent = 'Custom Range (Start & End)';
+
                 if (dateInput) {
                     if (typeof dateInput.showPicker === 'function') {
                         try { dateInput.showPicker(); } catch(e) { dateInput.focus(); }
@@ -953,16 +984,74 @@
                         dateInput.click();
                     }
                 }
-            } else {
+            } else if (val === 'custom_range') {
                 if (dateInput) dateInput.value = '';
                 if (singleOpt) singleOpt.textContent = 'Single Date';
+                window.dispatchEvent(new CustomEvent('open-modal', { detail: 'custom-date-range' }));
+            } else {
+                if (dateInput) dateInput.value = '';
+                if (startDateInput) startDateInput.value = '';
+                if (endDateInput) endDateInput.value = '';
+                if (singleOpt) singleOpt.textContent = 'Single Date';
+                if (rangeOpt) rangeOpt.textContent = 'Custom Range (Start & End)';
                 reloadTable();
             }
+        }
+
+        function applyCustomDateRange(e) {
+            if (e) e.preventDefault();
+
+            const startVal = document.getElementById('filter-start-date-input')?.value;
+            const endVal = document.getElementById('filter-end-date-input')?.value;
+            const startDateHidden = document.getElementById('filter-start-date');
+            const endDateHidden = document.getElementById('filter-end-date');
+            const rangeOpt = document.getElementById('custom-range-opt');
+            const durationSelect = document.getElementById('filter-duration');
+
+            if (!startVal || !endVal) {
+                showNotification('Please select both Start Date and End Date.', 'error');
+                return;
+            }
+
+            if (startVal > endVal) {
+                showNotification('Start Date cannot be after End Date.', 'error');
+                return;
+            }
+
+            if (startDateHidden) startDateHidden.value = startVal;
+            if (endDateHidden) endDateHidden.value = endVal;
+
+            const startParts = startVal.split('-');
+            const endParts = endVal.split('-');
+            const startDateObj = new Date(startParts[0], startParts[1] - 1, startParts[2]);
+            const endDateObj = new Date(endParts[0], endParts[1] - 1, endParts[2]);
+
+            const startFormatted = startDateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+            const endFormatted = endDateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+            if (rangeOpt) {
+                rangeOpt.textContent = `📅 ${startFormatted} - ${endFormatted}`;
+            }
+            if (durationSelect) {
+                durationSelect.value = 'custom_range';
+            }
+
+            window.dispatchEvent(new CustomEvent('close-modal', { detail: 'custom-date-range' }));
+            reloadTable();
+        }
+
+        function closeCustomDateRangeModal() {
+            window.dispatchEvent(new CustomEvent('close-modal', { detail: 'custom-date-range' }));
         }
 
         function handleSingleDateSelected(dateVal) {
             const singleOpt = document.getElementById('single-date-opt');
             const durationSelect = document.getElementById('filter-duration');
+            const startDateHidden = document.getElementById('filter-start-date');
+            const endDateHidden = document.getElementById('filter-end-date');
+
+            if (startDateHidden) startDateHidden.value = '';
+            if (endDateHidden) endDateHidden.value = '';
 
             if (dateVal) {
                 const parts = dateVal.split('-');
@@ -981,12 +1070,14 @@
         }
 
         function clearAllFilters() {
-            ['filter-date', 'filter-duration', 'filter-type', 'filter-contact', 'filter-member', 'filter-mode', 'filter-category', 'filter-search'].forEach(function(id) {
+            ['filter-date', 'filter-start-date', 'filter-end-date', 'filter-start-date-input', 'filter-end-date-input', 'filter-duration', 'filter-type', 'filter-contact', 'filter-member', 'filter-mode', 'filter-category', 'filter-search'].forEach(function(id) {
                 const el = document.getElementById(id);
                 if (el) el.value = '';
             });
             const singleOpt = document.getElementById('single-date-opt');
             if (singleOpt) singleOpt.textContent = 'Single Date';
+            const rangeOpt = document.getElementById('custom-range-opt');
+            if (rangeOpt) rangeOpt.textContent = 'Custom Range (Start & End)';
             reloadTable(true);
         }
 
@@ -1068,8 +1159,10 @@
                     url: '{{ route("books.transactions.data", $book) }}',
                     type: 'GET',
                     data: function(d) {
-                        d.date     = document.getElementById('filter-date')?.value     || '';
-                        d.duration = document.getElementById('filter-duration')?.value || '';
+                        d.date       = document.getElementById('filter-date')?.value       || '';
+                        d.start_date = document.getElementById('filter-start-date')?.value || '';
+                        d.end_date   = document.getElementById('filter-end-date')?.value   || '';
+                        d.duration   = document.getElementById('filter-duration')?.value   || '';
                         d.type     = document.getElementById('filter-type')?.value     || '';
                         d.contact  = document.getElementById('filter-contact')?.value  || '';
                         d.member   = document.getElementById('filter-member')?.value   || '';
@@ -1560,8 +1653,10 @@
         // Update summary cards based on filters
         function updateSummaryCards() {
             const filters = {
-                date:     document.getElementById('filter-date')?.value     || '',
-                duration: document.getElementById('filter-duration')?.value || '',
+                date:       document.getElementById('filter-date')?.value       || '',
+                start_date: document.getElementById('filter-start-date')?.value || '',
+                end_date:   document.getElementById('filter-end-date')?.value   || '',
+                duration:   document.getElementById('filter-duration')?.value   || '',
                 type:     document.getElementById('filter-type')?.value     || '',
                 member:   document.getElementById('filter-member')?.value   || '',
                 mode:     document.getElementById('filter-mode')?.value     || '',
