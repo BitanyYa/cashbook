@@ -404,7 +404,8 @@ class TransactionController extends Controller
         }
 
         if ($request->input('action') === 'save_and_add') {
-            return redirect()->route('transactions.create', ['book' => $transaction->book_id])
+            $date = $transaction->transaction_date ? $transaction->transaction_date->format('Y-m-d\TH:i') : null;
+            return redirect()->route('transactions.create', ['book' => $transaction->book_id, 'transaction_date' => $date])
                 ->with('success', 'Transaction updated successfully! Ready to add new entry.');
         }
 

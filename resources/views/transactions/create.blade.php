@@ -49,7 +49,7 @@
 
                     <div>
                         <x-input-label for="transaction_date" value="Transaction Date" />
-                        <x-text-input id="transaction_date" name="transaction_date" type="date" class="mt-1 block w-full" value="{{ old('transaction_date', now()->toDateString()) }}" required />
+                        <x-text-input id="transaction_date" name="transaction_date" type="date" class="mt-1 block w-full" value="{{ old('transaction_date', request('transaction_date') ? \Carbon\Carbon::parse(request('transaction_date'))->toDateString() : now()->toDateString()) }}" required />
                         <x-input-error :messages="$errors->get('transaction_date')" class="mt-2" />
                     </div>
                 </div>

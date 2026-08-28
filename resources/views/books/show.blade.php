@@ -1901,20 +1901,24 @@
             .then(data => {
                 if (data.success) {
                     const currentType = document.getElementById('type').value;
+                    const currentDateVal = document.getElementById('transaction_date')?.value;
 
                     // Reset form & staged files
                     this.reset();
                     resetStagedFiles('add');
                     document.getElementById('type').value = currentType;
 
-                    if (actionType !== 'save_and_add') {
+                    if (actionType === 'save_and_add') {
+                        if (currentDateVal) {
+                            document.getElementById('transaction_date').value = currentDateVal;
+                        }
+                        showNotification('Transaction added! Ready for next entry.', 'success');
+                    } else {
                         // Close modal using Alpine.js dispatch
                         window.dispatchEvent(new CustomEvent('close-modal', {
                             detail: 'add-transaction'
                         }));
                         showNotification('Transaction added successfully!', 'success');
-                    } else {
-                        showNotification('Transaction added! Ready for next entry.', 'success');
                     }
 
                     // Reload DataTable to show new transaction
@@ -1990,12 +1994,24 @@
                     }
 
                     if (actionType === 'save_and_add') {
+                        const dateOnly = document.getElementById('edit_date_only')?.value;
+                        const timeOnly = document.getElementById('edit_time_only')?.value;
+
                         // Immediately open Add Transaction modal pre-filled for this book
                         const addForm = document.getElementById('transaction-form');
                         if (addForm) {
                             addForm.reset();
                             resetStagedFiles('add');
                             document.getElementById('type').value = document.getElementById('edit_type').value || 'income';
+
+                            if (dateOnly) {
+                                const timeVal = timeOnly || '12:00';
+                                const fullDateTime = `${dateOnly}T${timeVal}`;
+                                const addDateInput = document.getElementById('transaction_date');
+                                if (addDateInput) {
+                                    addDateInput.value = fullDateTime;
+                                }
+                            }
                         }
                         window.dispatchEvent(new CustomEvent('open-modal', { detail: 'add-transaction' }));
                         showNotification('Transaction updated! Ready to add new entry.', 'success');
