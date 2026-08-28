@@ -372,7 +372,10 @@ class BookController extends Controller
         $summaryExpense = (clone $query)->where('type', 'expense')->sum('amount');
         $summaryBalance = $summaryIncome - $summaryExpense;
 
-        $transactions = $query->skip($start)->take($length)->get();
+        if ($length > 0) {
+            $query->skip($start)->take($length);
+        }
+        $transactions = $query->get();
 
         // Fast raw DB query for running balances (avoids heavy Eloquent model instantiation)
         $allBookTransactions = \Illuminate\Support\Facades\DB::table('transactions')

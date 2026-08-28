@@ -1174,6 +1174,11 @@
                         d.mode     = document.getElementById('filter-mode')?.value     || '';
                         d.category = document.getElementById('filter-category')?.value || '';
                         d.search   = document.getElementById('filter-search')?.value   || '';
+
+                        const hasActiveFilter = !!(d.date || d.start_date || d.end_date || d.duration || d.type || d.contact || d.member || d.mode || d.category || d.search);
+                        if (hasActiveFilter) {
+                            d.length = -1;
+                        }
                     },
                     dataSrc: function(json) {
                         if (json.summary) {
