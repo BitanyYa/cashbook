@@ -226,11 +226,20 @@ class TransactionController extends Controller
 
         // Handle AJAX requests
         if ($request->ajax() || $request->wantsJson()) {
+            $allTransactions = $book->transactions()->get();
+            $totalIncome = (float) $allTransactions->where('type', 'income')->sum('amount');
+            $totalExpense = (float) $allTransactions->where('type', 'expense')->sum('amount');
+
             return response()->json([
                 'success' => true,
                 'message' => 'Transaction created successfully',
                 'transaction' => $transaction->load(['category', 'book']),
-                'status' => $status
+                'status' => $status,
+                'summary' => [
+                    'total_income' => $totalIncome,
+                    'total_expense' => $totalExpense,
+                    'net_balance' => $totalIncome - $totalExpense,
+                ]
             ]);
         }
 
@@ -377,11 +386,20 @@ class TransactionController extends Controller
 
         // Handle AJAX requests
         if ($request->ajax() || $request->wantsJson()) {
+            $allTransactions = $book->transactions()->get();
+            $totalIncome = (float) $allTransactions->where('type', 'income')->sum('amount');
+            $totalExpense = (float) $allTransactions->where('type', 'expense')->sum('amount');
+
             return response()->json([
                 'success' => true,
                 'message' => 'Transaction updated successfully',
                 'action' => $request->input('action', 'update'),
-                'transaction' => $transaction->load(['category', 'book'])
+                'transaction' => $transaction->load(['category', 'book']),
+                'summary' => [
+                    'total_income' => $totalIncome,
+                    'total_expense' => $totalExpense,
+                    'net_balance' => $totalIncome - $totalExpense,
+                ]
             ]);
         }
 

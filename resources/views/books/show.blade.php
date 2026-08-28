@@ -94,6 +94,11 @@
         border-radius: 20px;
     }
 }
+@media (max-width: 640px) {
+    .modal-grid-2col {
+        grid-template-columns: 1fr !important;
+    }
+}
 .fpill {
     display: inline-flex;
     align-items: center;
@@ -640,7 +645,7 @@
             <input type="hidden" name="return_to" value="{{ route('books.show', $book) }}">
             <input type="hidden" id="type" name="type" value="income">
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.875rem;">
+            <div class="modal-grid-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:.875rem;">
                 <div class="form-group" style="margin-bottom:0;">
                     <label for="amount" class="form-label">Amount <span style="color:var(--danger-color);">*</span></label>
                     <input id="amount" name="amount" type="number" step="0.01" min="0.01" class="form-input" placeholder="0.00" required />
@@ -657,7 +662,7 @@
                     <div id="contact_suggestions" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:200;background:#fff;border:1px solid var(--gray-300);border-top:none;border-radius:0 0 6px 6px;max-height:180px;overflow-y:auto;box-shadow:0 4px 8px rgba(0,0,0,.08);"></div>
                 </div>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.875rem;">
+            <div class="modal-grid-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:.875rem;">
                 <div class="form-group" style="margin-bottom:0;">
                     <label for="category_id" class="form-label">Category</label>
                     <select id="category_id" name="category_id" class="form-select">
@@ -721,7 +726,7 @@
                 <button type="button" id="edit-cash-out-btn" onclick="setEditType('expense')"
                         style="padding:.45rem 1.25rem;border-radius:50px;border:1.5px solid var(--gray-300);background:#fff;font-size:.875rem;font-weight:600;color:var(--gray-700);cursor:pointer;transition:all .15s;">Cash Out</button>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.875rem;">
+            <div class="modal-grid-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:.875rem;">
                 <div>
                     <label style="font-size:.8125rem;font-weight:600;color:var(--gray-700);display:block;margin-bottom:.35rem;">Date <span style="color:var(--danger-color);">*</span></label>
                     <input id="edit_date_only" name="date_only" type="date" class="form-input" required />
@@ -1724,13 +1729,74 @@
         const addDataTransfer = new DataTransfer();
         const editDataTransfer = new DataTransfer();
 
-        window.handleFileSelection = function(event, mode) {
+        // Client-side image compression helper for mobile camera photos
+        window.compressImageFile = async function(file, maxWidth = 1600, maxHeight = 1600, quality = 0.75) {
+            if (!file || !file.type || !file.type.startsWith('image/')) {
+                return file;
+            }
+            if (file.size <= 400 * 1024) {
+                return file;
+            }
+
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > maxWidth || height > maxHeight) {
+                            if (width > height) {
+                                height = Math.round((height * maxWidth) / width);
+                                width = maxWidth;
+                            } else {
+                                width = Math.round((width * maxHeight) / height);
+                                height = maxHeight;
+                            }
+                        }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        canvas.toBlob(
+                            (blob) => {
+                                if (blob && blob.size < file.size) {
+                                    const fileName = (file.name || "receipt.jpg").replace(/\.[^/.]+$/, "") + ".jpg";
+                                    const compressedFile = new File([blob], fileName, {
+                                        type: 'image/jpeg',
+                                        lastModified: Date.now()
+                                    });
+                                    resolve(compressedFile);
+                                } else {
+                                    resolve(file);
+                                }
+                            },
+                            'image/jpeg',
+                            quality
+                        );
+                    };
+                    img.onerror = () => resolve(file);
+                };
+                reader.onerror = () => resolve(file);
+            });
+        };
+
+        window.handleFileSelection = async function(event, mode) {
             const input = event.target;
             const dt = mode === 'add' ? addDataTransfer : editDataTransfer;
 
             if (input.files && input.files.length) {
                 for (let i = 0; i < input.files.length; i++) {
-                    dt.items.add(input.files[i]);
+                    const originalFile = input.files[i];
+                    const compressedFile = await compressImageFile(originalFile);
+                    dt.items.add(compressedFile);
                 }
             }
             renderStagedFiles(mode);
@@ -1849,8 +1915,14 @@
                     // Reload DataTable to show new transaction
                     dataTable.ajax.reload(null, false);
 
-                    // Update summary cards
-                    updateSummaryCards();
+                    // Update summary cards instantly from response data
+                    if (data.summary) {
+                        updateSummaryCard('.cash-in-card', data.summary.total_income);
+                        updateSummaryCard('.cash-out-card', data.summary.total_expense);
+                        updateSummaryCard('.net-balance-card', data.summary.net_balance);
+                    } else {
+                        updateSummaryCards();
+                    }
                 } else {
                     showNotification(data.message || 'Error adding transaction', 'error');
                 }
@@ -1903,7 +1975,14 @@
 
                     // Reload table & summary
                     dataTable.ajax.reload(null, false);
-                    updateSummaryCards();
+
+                    if (data.summary) {
+                        updateSummaryCard('.cash-in-card', data.summary.total_income);
+                        updateSummaryCard('.cash-out-card', data.summary.total_expense);
+                        updateSummaryCard('.net-balance-card', data.summary.net_balance);
+                    } else {
+                        updateSummaryCards();
+                    }
 
                     if (actionType === 'save_and_add') {
                         // Immediately open Add Transaction modal pre-filled for this book
