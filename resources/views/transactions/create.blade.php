@@ -47,9 +47,19 @@
                         <x-input-error :messages="$errors->get('amount')" class="mt-2" />
                     </div>
 
+                    @php
+                        $user = Auth::user();
+                        $businessRole = $user->getBusinessRole($activeBusiness);
+                        $isAdmin = in_array($businessRole, ['primary_admin', 'admin']);
+                    @endphp
                     <div>
                         <x-input-label for="transaction_date" value="Transaction Date" />
-                        <x-text-input id="transaction_date" name="transaction_date" type="date" class="mt-1 block w-full" value="{{ old('transaction_date', request('transaction_date') ? \Carbon\Carbon::parse(request('transaction_date'))->toDateString() : now()->toDateString()) }}" required />
+                        @if($isAdmin)
+                            <x-text-input id="transaction_date" name="transaction_date" type="date" class="mt-1 block w-full" value="{{ old('transaction_date', request('transaction_date') ? \Carbon\Carbon::parse(request('transaction_date'))->toDateString() : now()->toDateString()) }}" required />
+                        @else
+                            <x-text-input id="transaction_date" name="transaction_date" type="date" class="mt-1 block w-full bg-gray-100 text-gray-500 cursor-not-allowed" value="{{ now()->toDateString() }}" readonly title="Employees can only post using current date" required />
+                            <p class="mt-1 text-xs text-gray-500">Auto-set to current date</p>
+                        @endif
                         <x-input-error :messages="$errors->get('transaction_date')" class="mt-2" />
                     </div>
                 </div>

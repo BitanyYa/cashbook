@@ -152,9 +152,9 @@ class TransactionController extends Controller
             $hasAccess = true;
         }
 
-        // Check permissions based on book role
-        if ($bookRole === 'employee') {
-            // Employees may still create transactions, but their status is pending
+        // Non-admin employees cannot pick custom transaction dates; force current timestamp when posted
+        if (!in_array($bookRole, ['primary_admin', 'admin'])) {
+            $data['transaction_date'] = now()->toDateTimeString();
         }
 
         // Set transaction status to approved so entries appear immediately in the book

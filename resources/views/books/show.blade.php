@@ -652,7 +652,12 @@
                 </div>
                 <div class="form-group" style="margin-bottom:0;">
                     <label for="transaction_date" class="form-label">Date &amp; Time <span style="color:var(--danger-color);">*</span></label>
-                    <input id="transaction_date" name="transaction_date" type="datetime-local" class="form-input" value="{{ now()->format('Y-m-d\TH:i') }}" required />
+                    @if(in_array($bookRole, ['primary_admin', 'admin']))
+                        <input id="transaction_date" name="transaction_date" type="datetime-local" class="form-input" value="{{ now()->format('Y-m-d\TH:i') }}" required />
+                    @else
+                        <input id="transaction_date" name="transaction_date" type="datetime-local" class="form-input" value="{{ now()->format('Y-m-d\TH:i') }}" readonly style="background:#f1f5f9;color:#64748b;cursor:not-allowed;" title="Employees can only post using current date and time" />
+                        <small style="font-size:0.7rem;color:#64748b;display:block;margin-top:2px;">Auto-set to current date &amp; time</small>
+                    @endif
                 </div>
             </div>
             <div class="form-group" style="margin-bottom:0;">
@@ -1909,7 +1914,12 @@
                     document.getElementById('type').value = currentType;
 
                     if (actionType === 'save_and_add') {
-                        if (currentDateVal) {
+                        const isEmployee = !@js(in_array($bookRole, ['primary_admin', 'admin']));
+                        if (isEmployee) {
+                            const now = new Date();
+                            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                            document.getElementById('transaction_date').value = now.toISOString().slice(0, 16);
+                        } else if (currentDateVal) {
                             document.getElementById('transaction_date').value = currentDateVal;
                         }
                         showNotification('Transaction added! Ready for next entry.', 'success');
