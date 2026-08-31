@@ -138,6 +138,69 @@
     white-space: nowrap;
 }
 
+/* ── DataTables Modern Pagination Footer ── */
+.dt-pagination-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1.25rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    margin-top: 0.75rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+.dataTables_info {
+    font-size: 0.85rem;
+    color: #64748b;
+    font-weight: 500;
+}
+.dataTables_paginate {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+.dataTables_paginate .paginate_button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155 !important;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-decoration: none !important;
+    transition: all 0.15s ease-in-out;
+    user-select: none;
+}
+.dataTables_paginate .paginate_button:hover:not(.disabled):not(.current) {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #0f172a !important;
+}
+.dataTables_paginate .paginate_button.current {
+    background: #2563eb !important;
+    border-color: #2563eb !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 4px rgba(37,99,235,0.25);
+}
+.dataTables_paginate .paginate_button.disabled {
+    opacity: 0.45;
+    cursor: not-allowed !important;
+    background: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+    color: #94a3b8 !important;
+}
+
 /* ── Search + action row ── */
 .search-action-row {
     display: flex;
@@ -1105,10 +1168,15 @@
             if (!mobileContainer) return;
 
             if (useCardLayout) {
-                if (desktopTable) desktopTable.style.display = 'none';
+                const tableHeader = document.querySelector('#transactions-table thead');
+                const tableBody = document.querySelector('#transactions-table tbody');
+                if (tableHeader) tableHeader.style.display = 'none';
+                if (tableBody) tableBody.style.display = 'none';
+                if (desktopTable) desktopTable.style.display = 'block';
+
                 mobileContainer.style.display = 'flex';
                 if (mobileHeader) mobileHeader.style.display = 'flex';
-                if (mobileCountText) mobileCountText.textContent = `Showing ${dataArray ? dataArray.length : 0} entries`;
+                if (mobileCountText) mobileCountText.textContent = `Showing ${dataArray ? dataArray.length : 0} of ${totalRecords || 0} entries`;
 
                 mobileContainer.innerHTML = '';
                 if (!dataArray || dataArray.length === 0) {
@@ -1151,7 +1219,12 @@
                     mobileContainer.appendChild(card);
                 });
             } else {
+                const tableHeader = document.querySelector('#transactions-table thead');
+                const tableBody = document.querySelector('#transactions-table tbody');
+                if (tableHeader) tableHeader.style.display = '';
+                if (tableBody) tableBody.style.display = '';
                 if (desktopTable) desktopTable.style.display = 'block';
+
                 mobileContainer.style.display = 'none';
                 if (mobileHeader) mobileHeader.style.display = 'none';
             }
@@ -1164,7 +1237,8 @@
                 serverSide: true,
                 stateSave: true,
                 stateDuration: 60 * 60 * 24,
-                dom: 'rt', // Hide default DataTables search, page length and paginator
+                dom: 'rt<"dt-pagination-footer"ip>',
+                pageLength: 50,
                 ajax: {
                     url: '{{ route("books.transactions.data", $book) }}',
                     type: 'GET',
@@ -1179,11 +1253,6 @@
                         d.mode     = document.getElementById('filter-mode')?.value     || '';
                         d.category = document.getElementById('filter-category')?.value || '';
                         d.search   = document.getElementById('filter-search')?.value   || '';
-
-                        const hasActiveFilter = !!(d.date || d.start_date || d.end_date || d.duration || d.type || d.contact || d.member || d.mode || d.category || d.search);
-                        if (hasActiveFilter) {
-                            d.length = -1;
-                        }
                     },
                     dataSrc: function(json) {
                         if (json.summary) {
