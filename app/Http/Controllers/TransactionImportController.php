@@ -61,18 +61,20 @@ class TransactionImportController extends Controller
                 return null;
             };
 
-            $dateCol = $findCol(['date', 'transaction date', 'entry date']);
-            $timeCol = $findCol(['time', 'transaction time']);
-            $remarkCol = $findCol(['remark', 'remarks', 'description', 'note', 'details']);
-            $partyCol = $findCol(['party', 'contact', 'name', 'customer', 'vendor']);
-            $categoryCol = $findCol(['category', 'type']);
-            $modeCol = $findCol(['mode', 'payment mode', 'payment method']);
-            $entryByCol = $findCol(['entry by', 'created by', 'user', 'entryby']);
-            $cashInCol = $findCol(['cash in', 'cashin', 'in', 'income', 'credit', 'amount in', 'cash_in']);
-            $cashOutCol = $findCol(['cash out', 'cashout', 'out', 'expense', 'debit', 'amount out', 'cash_out']);
+            $dateCol     = $findCol(['date', 'transaction date', 'entry date', 'txn date', 'datetime']);
+            $timeCol     = $findCol(['time', 'transaction time', 'entry time']);
+            $remarkCol   = $findCol(['remark', 'remarks', 'description', 'note', 'details', 'particulars']);
+            $partyCol    = $findCol(['party', 'contact', 'name', 'customer', 'vendor', 'party name', 'contact name']);
+            $categoryCol = $findCol(['category', 'category name', 'cat']);
+            $typeCol     = $findCol(['type', 'txn type', 'transaction type', 'entry type']);
+            $modeCol     = $findCol(['mode', 'payment mode', 'payment method', 'pay mode']);
+            $entryByCol  = $findCol(['entry by', 'created by', 'user', 'entryby', 'added by']);
+            $cashInCol   = $findCol(['cash in', 'cashin', 'in', 'income', 'credit', 'amount in', 'cash_in']);
+            $cashOutCol  = $findCol(['cash out', 'cashout', 'out', 'expense', 'debit', 'amount out', 'cash_out']);
+            $amountCol   = $findCol(['amount', 'sum', 'value', 'txn amount', 'transaction amount']);
 
-            if ($dateCol === null || ($cashInCol === null && $cashOutCol === null)) {
-                return redirect()->back()->with('error', 'CSV missing required headers. Found headers: "' . implode(', ', $rawHeader) . '". Required: Date, Cash In / Cash Out.');
+            if ($dateCol === null || ($cashInCol === null && $cashOutCol === null && $amountCol === null)) {
+                return redirect()->back()->with('error', 'CSV missing required headers. Found headers: "' . implode(', ', $rawHeader) . '". Required: Date, Cash In / Cash Out (or Amount).');
             }
 
             $existingCategories = Category::where('business_id', $book->business_id)
@@ -96,44 +98,70 @@ class TransactionImportController extends Controller
                     continue;
                 }
 
-                $totalRows++;
-
-                $rawDate = $data[$dateCol] ?? null;
+                $rawDate = $dateCol !== null ? ($data[$dateCol] ?? '') : '';
                 $rawTime = $timeCol !== null ? ($data[$timeCol] ?? '') : '';
-                $remark = $remarkCol !== null ? trim($data[$remarkCol] ?? '') : '';
-                $party = $partyCol !== null ? trim($data[$partyCol] ?? '') : null;
-                $categoryName = $categoryCol !== null ? trim($data[$categoryCol] ?? '') : null;
-                $mode = $modeCol !== null ? trim(strtolower($data[$modeCol] ?? 'cash')) : 'cash';
-                $entryBy = $entryByCol !== null ? trim($data[$entryByCol] ?? '') : null;
+                $remark = $remarkCol !== null ? trim((string)($data[$remarkCol] ?? '')) : '';
+                $party = $partyCol !== null ? trim((string)($data[$partyCol] ?? '')) : null;
+                $categoryName = $categoryCol !== null ? trim((string)($data[$categoryCol] ?? '')) : null;
+                $typeVal = $typeCol !== null ? trim((string)($data[$typeCol] ?? '')) : '';
+                $mode = $modeCol !== null ? trim(strtolower((string)($data[$modeCol] ?? 'cash'))) : 'cash';
+                $entryBy = $entryByCol !== null ? trim((string)($data[$entryByCol] ?? '')) : null;
 
+                // Skip repeated header rows or summary/subtotal/total rows at top/bottom of CSV
+                $combinedText = strtolower(trim($rawDate . ' ' . $remark . ' ' . ($party ?? '') . ' ' . ($categoryName ?? '')));
+                if (preg_match('/\b(grand\s*total|total|subtotal|sub\s*total|summary|opening\s*balance|closing\s*balance|balance\s*c\/f|balance\s*b\/f)\b/i', $combinedText)) {
+                    continue;
+                }
+                if (strtolower(trim($rawDate)) === 'date' || strtolower(trim($rawDate)) === 'transaction date') {
+                    continue;
+                }
+
+                // Parse Cash In / Cash Out or Amount & Type
                 $cashIn = $cashInCol !== null ? $this->cleanAmount($data[$cashInCol] ?? 0) : 0;
                 $cashOut = $cashOutCol !== null ? $this->cleanAmount($data[$cashOutCol] ?? 0) : 0;
+                $rawAmt = $amountCol !== null ? $this->cleanAmount($data[$amountCol] ?? 0) : 0;
 
-                // Determine Type & Amount
                 $type = null;
                 $amount = 0;
-                if ($cashIn > 0) {
+
+                if ($cashIn > 0 && $cashOut == 0) {
                     $type = 'income';
                     $amount = $cashIn;
-                } elseif ($cashOut > 0) {
+                } elseif ($cashOut > 0 && $cashIn == 0) {
                     $type = 'expense';
                     $amount = $cashOut;
+                } elseif ($cashIn > 0 && $cashOut > 0) {
+                    if (preg_match('/\b(expense|cash\s*out|out|debit|outflow)\b/i', $typeVal)) {
+                        $type = 'expense';
+                        $amount = $cashOut;
+                    } else {
+                        $type = 'income';
+                        $amount = $cashIn;
+                    }
+                } elseif ($rawAmt > 0) {
+                    $amount = $rawAmt;
+                    if (preg_match('/\b(expense|cash\s*out|out|debit|outflow)\b/i', $typeVal . ' ' . $categoryName)) {
+                        $type = 'expense';
+                    } else {
+                        $type = 'income';
+                    }
                 }
+
+                // Skip zero-amount filler or non-transaction summary rows
+                if ($amount <= 0 || !$type) {
+                    continue;
+                }
+
+                $totalRows++;
 
                 // Parse Date & Time
                 $parsedDateTime = $this->parseDateTime($rawDate, $rawTime);
                 $status = 'ready';
                 $errorMessage = null;
 
-                if (!$type || $amount <= 0) {
-                    $status = 'invalid';
-                    $errorMessage = 'Missing Cash In or Cash Out amount.';
-                    $invalidCount++;
-                } elseif (!$parsedDateTime) {
+                if (!$parsedDateTime) {
                     $parsedDateTime = now()->format('Y-m-d H:i:s');
-                    $status = 'ready';
                     $errorMessage = 'Date auto-set to current date & time (original text: "' . trim($rawDate . ' ' . $rawTime) . '")';
-                    $readyCount++;
                 }
 
                 // Match Entry By User
