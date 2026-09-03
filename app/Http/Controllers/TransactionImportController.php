@@ -130,9 +130,10 @@ class TransactionImportController extends Controller
                     $errorMessage = 'Missing Cash In or Cash Out amount.';
                     $invalidCount++;
                 } elseif (!$parsedDateTime) {
-                    $status = 'invalid';
-                    $errorMessage = 'Invalid Date/Time: "' . $rawDate . ' ' . $rawTime . '"';
-                    $invalidCount++;
+                    $parsedDateTime = now()->format('Y-m-d H:i:s');
+                    $status = 'ready';
+                    $errorMessage = 'Date auto-set to current date & time (original text: "' . trim($rawDate . ' ' . $rawTime) . '")';
+                    $readyCount++;
                 }
 
                 // Match Entry By User
@@ -360,43 +361,115 @@ class TransactionImportController extends Controller
      */
     private function parseDateTime($rawDate, $rawTime)
     {
-        if (empty($rawDate)) return null;
+        if (empty($rawDate) && empty($rawTime)) return null;
 
         $rawDate = trim((string)$rawDate);
         $rawTime = trim((string)$rawTime);
 
-        // Handle Excel numeric serial date (e.g. 45504)
-        if (is_numeric($rawDate) && (float)$rawDate > 30000 && (float)$rawDate < 60000) {
-            try {
-                $dateObj = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($rawDate);
-                $rawDate = $dateObj->format('Y-m-d');
-            } catch (\Exception $e) {}
+        // Normalize non-breaking spaces and invisible characters
+        $rawDate = preg_replace('/[\x00-\x1F\x7F\xA0]/u', ' ', $rawDate);
+        $rawDate = trim(preg_replace('/\s+/', ' ', $rawDate));
+
+        $rawTime = preg_replace('/[\x00-\x1F\x7F\xA0]/u', ' ', $rawTime);
+        $rawTime = trim(preg_replace('/\s+/', ' ', $rawTime));
+
+        if (empty($rawDate) && !empty($rawTime)) {
+            $rawDate = now()->format('Y-m-d');
         }
 
+        // Handle Excel numeric serial date (e.g. 45504 or 45504.6041666667)
+        if (is_numeric($rawDate)) {
+            $num = (float)$rawDate;
+            if ($num > 10000 && $num < 90000) {
+                try {
+                    if (class_exists('\PhpOffice\PhpSpreadsheet\Shared\Date')) {
+                        $dateObj = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($num);
+                        return $dateObj->format('Y-m-d H:i:s');
+                    } else {
+                        $base = strtotime('1899-12-30');
+                        $seconds = (int)round($num * 86400);
+                        return date('Y-m-d H:i:s', $base + $seconds);
+                    }
+                } catch (\Exception $e) {}
+            }
+        }
+
+        // Combine date and time string
         $dateStr = $rawDate;
         if (!empty($rawTime)) {
             $dateStr .= ' ' . $rawTime;
         }
 
+        // Clean up ISO T/Z characters, quotes, commas
+        $cleanStr = str_replace(['T', 'Z', '"', "'"], [' ', '', '', ''], $dateStr);
+        $cleanStr = trim(preg_replace('/\s+/', ' ', $cleanStr));
+
+        // 1. Try Carbon::parse directly
         try {
-            return Carbon::parse($dateStr)->format('Y-m-d H:i:s');
-        } catch (\Exception $e) {
-            $formats = [
-                'Y-m-d H:i:s', 'Y-m-d H:i', 'Y-m-d',
-                'd/m/Y H:i:s', 'd/m/Y H:i', 'd/m/Y',
-                'm/d/Y H:i:s', 'm/d/Y H:i', 'm/d/Y',
-                'd-m-Y H:i:s', 'd-m-Y H:i', 'd-m-Y',
-                'd.m.Y H:i:s', 'd.m.Y H:i', 'd.m.Y'
-            ];
-            foreach ($formats as $fmt) {
-                try {
-                    return Carbon::createFromFormat($fmt, $dateStr)->format('Y-m-d H:i:s');
-                } catch (\Exception $ex) {
-                    continue;
-                }
-            }
-            return null;
+            return Carbon::parse($cleanStr)->format('Y-m-d H:i:s');
+        } catch (\Exception $e) {}
+
+        // 2. Try PHP strtotime
+        $timestamp = strtotime($cleanStr);
+        if ($timestamp !== false && $timestamp > 0) {
+            return date('Y-m-d H:i:s', $timestamp);
         }
+
+        // 3. Exhaustive multi-format parsing
+        $formats = [
+            'Y-m-d H:i:s', 'Y-m-d H:i', 'Y-m-d g:i A', 'Y-m-d h:i A', 'Y-m-d',
+            'Y/m/d H:i:s', 'Y/m/d H:i', 'Y/m/d g:i A', 'Y/m/d h:i A', 'Y/m/d',
+            'Y.m.d H:i:s', 'Y.m.d H:i', 'Y.m.d',
+            'd/m/Y H:i:s', 'd/m/Y H:i', 'd/m/Y g:i A', 'd/m/Y h:i A', 'd/m/Y',
+            'm/d/Y H:i:s', 'm/d/Y H:i', 'm/d/Y g:i A', 'm/d/Y h:i A', 'm/d/Y',
+            'd-m-Y H:i:s', 'd-m-Y H:i', 'd-m-Y g:i A', 'd-m-Y h:i A', 'd-m-Y',
+            'd.m.Y H:i:s', 'd.m.Y H:i', 'd.m.Y',
+            'd M Y H:i:s', 'd M Y H:i', 'd M Y', 'd F Y', 'M d, Y', 'Y-M-d',
+            'd/m/y H:i:s', 'd/m/y H:i', 'd/m/y', 'm/d/y', 'd-m-y'
+        ];
+        foreach ($formats as $fmt) {
+            try {
+                return Carbon::createFromFormat($fmt, $cleanStr)->format('Y-m-d H:i:s');
+            } catch (\Exception $ex) {
+                continue;
+            }
+        }
+
+        // 4. Regex extraction for d/m/Y or Y/m/d with separators (., /, -)
+        if (preg_match('/^(\d{1,4})[\.\/\-](\d{1,2})[\.\/\-](\d{1,4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?(?:\s*(AM|PM))?)?$/i', $cleanStr, $matches)) {
+            $p1 = (int)$matches[1];
+            $p2 = (int)$matches[2];
+            $p3 = (int)$matches[3];
+            $hour = isset($matches[4]) ? (int)$matches[4] : 12;
+            $min  = isset($matches[5]) ? (int)$matches[5] : 0;
+            $sec  = isset($matches[6]) ? (int)$matches[6] : 0;
+            $ampm = isset($matches[7]) ? strtoupper($matches[7]) : '';
+
+            if ($ampm === 'PM' && $hour < 12) $hour += 12;
+            if ($ampm === 'AM' && $hour == 12) $hour = 0;
+
+            if ($p1 > 1000) {
+                $year = $p1; $month = $p2; $day = $p3;
+            } elseif ($p3 > 1000) {
+                $year = $p3;
+                if ($p1 > 12) {
+                    $day = $p1; $month = $p2;
+                } elseif ($p2 > 12) {
+                    $day = $p2; $month = $p1;
+                } else {
+                    $day = $p1; $month = $p2;
+                }
+            } else {
+                $year = 2000 + $p3;
+                $day = $p1; $month = $p2;
+            }
+
+            if (checkdate($month, $day, $year)) {
+                return sprintf('%04d-%02d-%02d %02d:%02d:%02d', $year, $month, $day, $hour, $min, $sec);
+            }
+        }
+
+        return null;
     }
 
     /**
