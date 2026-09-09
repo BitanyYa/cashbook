@@ -2029,6 +2029,13 @@
         document.getElementById('edit-transaction-form').addEventListener('submit', function(e) {
             e.preventDefault();
 
+            // Combine date + time into hidden datetime field BEFORE creating FormData
+            const d = document.getElementById('edit_date_only')?.value;
+            const t = document.getElementById('edit_time_only')?.value || '00:00';
+            if (d) {
+                document.getElementById('edit_transaction_date').value = d + 'T' + t;
+            }
+
             const transactionId = document.getElementById('edit_transaction_id').value;
             if (!transactionId) {
                 showNotification('Missing transaction ID', 'error');
@@ -2040,20 +2047,35 @@
             formData.append('action', actionType);
 
             const submitBtn = actionType === 'save_and_add' ? document.getElementById('edit-save-add-btn') : document.getElementById('edit-submit-btn');
-            const originalText = submitBtn.textContent;
+            const originalText = submitBtn ? submitBtn.textContent : 'Update';
 
-            submitBtn.textContent = 'Saving...';
-            submitBtn.disabled = true;
+            if (submitBtn) {
+                submitBtn.textContent = 'Saving...';
+                submitBtn.disabled = true;
+            }
+
+            const activeCsrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || csrfToken;
 
             fetch(`/transactions/${transactionId}`, {
                 method: 'POST',
                 headers: {
-                    'X-CSRF-TOKEN': csrfToken,
+                    'X-CSRF-TOKEN': activeCsrfToken,
                     'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: formData
             })
-            .then(response => response.json())
+            .then(async response => {
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    let errMsg = data.message || 'Error updating transaction';
+                    if (data.errors) {
+                        const errList = Object.values(data.errors).flat();
+                        if (errList.length) errMsg = errList.join(' ');
+                    }
+                    throw new Error(errMsg);
+                }
+                return data;
+            })
             .then(data => {
                 if (data.success) {
                     // Close edit modal
@@ -2103,11 +2125,13 @@
             })
             .catch(error => {
                 console.error('Error updating transaction:', error);
-                showNotification('Error updating transaction', 'error');
+                showNotification(error.message || 'Error updating transaction', 'error');
             })
             .finally(() => {
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
+                if (submitBtn) {
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                }
                 delete this.dataset.action;
             });
         });
@@ -2384,66 +2408,7 @@
 
 
 
-        // Edit transaction via AJAX
-        document.getElementById('edit-transaction-form').addEventListener('submit', function(e) {
-            e.preventDefault();
 
-            // Combine date + time into hidden datetime field before creating FormData
-            const d = document.getElementById('edit_date_only').value;
-            const t = document.getElementById('edit_time_only').value || '00:00';
-            document.getElementById('edit_transaction_date').value = d + 'T' + t;
-
-            const transactionId = document.getElementById('edit_transaction_id').value;
-            const formData = new FormData(this);
-            const submitBtn = this.querySelector('button[type="submit"]');
-            const originalText = submitBtn.textContent;
-
-            // Disable submit button and show loading state
-            submitBtn.textContent = 'Updating...';
-            submitBtn.disabled = true;
-
-            fetch(`/transactions/${transactionId}`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // Close modal using Alpine.js dispatch
-                    window.dispatchEvent(new CustomEvent('close-modal', {
-                        detail: 'edit-transaction'
-                    }));
-
-                    // Show success message
-                    showNotification('Transaction updated successfully!', 'success');
-
-                    // Reload DataTable to show updated transaction
-                    dataTable.ajax.reload();
-
-                    // Update summary cards
-                    updateSummaryCards();
-                } else {
-                    showNotification(data.message || 'Error updating transaction', 'error');
-                }
-            })
-            .catch(error => {
-                showNotification('Error updating transaction: ' + error.message, 'error');
-            })
-            .finally(() => {
-                // Re-enable submit button
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
-            });
-        });
 
 
 
