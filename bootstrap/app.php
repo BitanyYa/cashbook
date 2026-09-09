@@ -15,6 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('cashbook:recurring:process')->dailyAt('02:00');
     })
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->web(append: [
+            \App\Http\Middleware\PreventPageCaching::class,
+        ]);
+
         // Route middleware aliases
         $middleware->alias([
             'active.business' => \App\Http\Middleware\SetActiveBusiness::class,

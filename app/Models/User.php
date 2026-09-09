@@ -107,7 +107,7 @@ class User extends Authenticatable
             ->where('user_id', $this->id)
             ->value('role');
 
-        return $pivotRole ?? $businessRole ?? 'employee';
+        return $pivotRole;
     }
 
     public function canViewBook(?Book $book): bool

@@ -50,7 +50,7 @@ class BookRoleAccessTest extends TestCase
 
         // Attach users to book with different roles
         $this->book->users()->attach($this->managerUser->id, ['role' => 'primary_admin']);
-        $this->book->users()->attach($this->editorUser->id, ['role' => 'employee']);
+        $this->book->users()->attach($this->editorUser->id, ['role' => 'admin']);
         $this->book->users()->attach($this->viewerUser->id, ['role' => 'employee']);
 
         // Create test category

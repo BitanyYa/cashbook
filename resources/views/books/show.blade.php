@@ -372,7 +372,7 @@
             </svg>
         </a>
         <div style="min-width:0;flex:1;">
-            <h1 class="book-page-title">{{ strtoupper($book->name) }}</h1>
+            <h1 class="book-page-title">{{ $book->name }}</h1>
             @php
                 $memberNames = $book->users->pluck('name')->filter()->values();
                 $memberSub = $memberNames->take(3)->join(', ');
@@ -2558,13 +2558,33 @@
             }, 3000);
         }
 
-        // User Management Functions
+        // User Management Functions & Modal History Management
         document.addEventListener('DOMContentLoaded', function() {
-            // Listen for manage users modal open event
+            let activeModalStatePushed = false;
+
             window.addEventListener('open-modal', function(event) {
                 if (event.detail === 'manage-users') {
                     loadBookUsers();
                     initializeUserSearch();
+                }
+                if (!activeModalStatePushed) {
+                    activeModalStatePushed = true;
+                    history.pushState({ modalOpen: true, modal: event.detail }, '');
+                }
+            });
+
+            window.addEventListener('close-modal', function(event) {
+                if (activeModalStatePushed) {
+                    activeModalStatePushed = false;
+                }
+            });
+
+            window.addEventListener('popstate', function(event) {
+                if (activeModalStatePushed) {
+                    activeModalStatePushed = false;
+                    ['edit-transaction', 'add-transaction', 'manage-users', 'transaction-detail'].forEach(function(modalId) {
+                        window.dispatchEvent(new CustomEvent('close-modal', { detail: modalId }));
+                    });
                 }
             });
 

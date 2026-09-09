@@ -24,8 +24,8 @@ class TransactionController extends Controller
 
         $query = Transaction::where('business_id', $business->id)->with(['book','category','user']);
 
-        if ($role === 'employee') {
-            $assignedBookIds = $user->belongsToMany(Book::class, 'book_user')->pluck('books.id');
+        if ($role !== 'primary_admin') {
+            $assignedBookIds = $user->books()->where('business_id', $business->id)->pluck('books.id');
             $query->whereIn('book_id', $assignedBookIds);
         }
 
@@ -67,15 +67,14 @@ class TransactionController extends Controller
         $user = $request->user();
         $businessRole = $user->getBusinessRole($business);
 
-        // Get books where user can add transactions (exclude employee-only access)
-        if (in_array($businessRole, ['primary_admin', 'admin'])) {
-            // Primary admins and admins can add transactions to any book
+        // Get books where user can add transactions
+        if ($businessRole === 'primary_admin') {
+            // Primary admins can add transactions to any book in the business
             $books = Book::where('business_id', $business->id)->get();
         } else {
-            // For employees, only include books where they have book-level access
+            // For non-primary admins, only include books where they are assigned
             $bookIds = $user->books()
                 ->where('business_id', $business->id)
-                ->wherePivotIn('role', ['primary_admin', 'admin', 'employee'])
                 ->pluck('books.id');
 
             $books = Book::where('business_id', $business->id)
@@ -136,19 +135,14 @@ class TransactionController extends Controller
         abort_unless($book->business_id === $business->id, 404);
 
         // Determine user's access and role for this book
-        if (in_array($businessRole, ['primary_admin', 'admin'])) {
-            // Primary admins and admins always have primary_admin-level access to all books
+        if ($businessRole === 'primary_admin') {
             $bookRole = 'primary_admin';
             $hasAccess = true;
         } else {
-            // For employees, check their specific role in this book
-            $bookUser = $user->books()->where('books.id', $data['book_id'])->first();
-
-            if (!$bookUser) {
+            $bookRole = $user->getBookRole($book);
+            if (!$bookRole) {
                 abort(403, 'You do not have access to this book');
             }
-
-            $bookRole = $bookUser->pivot->role;
             $hasAccess = true;
         }
 
@@ -453,7 +447,11 @@ class TransactionController extends Controller
             ]);
         }
 
-        return redirect()->route('transactions.index');
+        if ($request->filled('return_to')) {
+            return redirect($request->input('return_to'))->with('success', 'Transaction deleted successfully!');
+        }
+
+        return redirect()->route('books.show', $transaction->book_id)->with('success', 'Transaction deleted successfully!');
     }
 
     public function bulkDelete(Request $request)

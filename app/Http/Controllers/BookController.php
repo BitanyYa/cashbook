@@ -27,7 +27,7 @@ class BookController extends Controller
 
         $query = Book::where('business_id', $business->id);
 
-        if (!in_array($role, ['primary_admin', 'admin'])) {
+        if ($role !== 'primary_admin') {
             // Book admins and employees only see books they are explicitly assigned to
             $assignedBookIds = $user->books()->where('business_id', $business->id)->pluck('books.id');
             $query->whereIn('id', $assignedBookIds);

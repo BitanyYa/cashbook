@@ -12,10 +12,13 @@ class BookPolicy
      */
     public function view(User $user, Book $book): bool
     {
-        $role = $user->getBookRole($book);
         $businessRole = $user->getBusinessRole($book->business);
+        if ($businessRole === 'primary_admin') {
+            return true;
+        }
 
-        return $businessRole === 'primary_admin' || in_array($role, ['primary_admin', 'admin', 'operator', 'employee', 'viewer']);
+        $role = $user->getBookRole($book);
+        return $role !== null && in_array($role, ['primary_admin', 'admin', 'operator', 'employee', 'viewer']);
     }
 
     /**
@@ -23,10 +26,13 @@ class BookPolicy
      */
     public function update(User $user, Book $book): bool
     {
-        $role = $user->getBookRole($book);
         $businessRole = $user->getBusinessRole($book->business);
+        if ($businessRole === 'primary_admin') {
+            return true;
+        }
 
-        return $businessRole === 'primary_admin' || in_array($role, ['primary_admin', 'admin']);
+        $role = $user->getBookRole($book);
+        return $role !== null && in_array($role, ['primary_admin', 'admin']);
     }
 
     /**
@@ -34,10 +40,13 @@ class BookPolicy
      */
     public function delete(User $user, Book $book): bool
     {
-        $role = $user->getBookRole($book);
         $businessRole = $user->getBusinessRole($book->business);
+        if ($businessRole === 'primary_admin') {
+            return true;
+        }
 
-        return $businessRole === 'primary_admin' || in_array($role, ['primary_admin', 'admin']);
+        $role = $user->getBookRole($book);
+        return $role !== null && in_array($role, ['primary_admin', 'admin']);
     }
 
     /**
@@ -45,10 +54,13 @@ class BookPolicy
      */
     public function manageMembers(User $user, Book $book): bool
     {
-        $role = $user->getBookRole($book);
         $businessRole = $user->getBusinessRole($book->business);
+        if ($businessRole === 'primary_admin') {
+            return true;
+        }
 
-        return $businessRole === 'primary_admin' || in_array($role, ['primary_admin', 'admin']);
+        $role = $user->getBookRole($book);
+        return $role !== null && in_array($role, ['primary_admin', 'admin']);
     }
 
     /**
@@ -56,9 +68,12 @@ class BookPolicy
      */
     public function transferOwnership(User $user, Book $book): bool
     {
-        $role = $user->getBookRole($book);
         $businessRole = $user->getBusinessRole($book->business);
+        if ($businessRole === 'primary_admin') {
+            return true;
+        }
 
-        return $businessRole === 'primary_admin' || $role === 'primary_admin';
+        $role = $user->getBookRole($book);
+        return $role === 'primary_admin';
     }
 }

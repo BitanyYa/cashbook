@@ -15,8 +15,28 @@ class SetActiveBusiness
         if ($user) {
             $activeId = session('active_business_id');
 
+            // Check if route specifies a book or transaction belonging to a business the user has access to
+            $routeBook = $request->route('book');
+            $routeTx = $request->route('transaction');
+            $targetBusinessId = null;
+
+            if ($routeBook instanceof \App\Models\Book) {
+                $targetBusinessId = $routeBook->business_id;
+            } elseif (is_numeric($routeBook)) {
+                $targetBusinessId = \App\Models\Book::where('id', $routeBook)->value('business_id');
+            } elseif ($routeTx instanceof \App\Models\Transaction) {
+                $targetBusinessId = $routeTx->business_id;
+            } elseif (is_numeric($routeTx)) {
+                $targetBusinessId = \App\Models\Transaction::where('id', $routeTx)->value('business_id');
+            }
+
+            if ($targetBusinessId && $user->businesses()->where('businesses.id', $targetBusinessId)->exists()) {
+                $activeId = $targetBusinessId;
+                session(['active_business_id' => $activeId]);
+            }
+
             // Verify if stored active_business_id is still valid for this user
-            if ($activeId && !$user->businesses()->where('business_id', $activeId)->exists()) {
+            if ($activeId && !$user->businesses()->where('businesses.id', $activeId)->exists()) {
                 session()->forget('active_business_id');
                 $activeId = null;
             }
