@@ -1482,7 +1482,7 @@
                 if (document.visibilityState === 'visible' && dataTable) {
                     reloadTable(false);
                 }
-            }, 10000);
+            }, 30000);
 
             document.addEventListener('visibilitychange', function() {
                 if (document.visibilityState === 'visible' && dataTable) {

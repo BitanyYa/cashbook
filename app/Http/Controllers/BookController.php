@@ -248,9 +248,9 @@ class BookController extends Controller
         });
 
         $categories = Category::where('business_id', $business->id)->get();
-        $dbModes = $book->transactions()->whereNotNull('mode')->where('mode', '!=', '')->distinct()->pluck('mode')->map(fn($m) => ucfirst(strtolower($m)))->toArray();
+        $dbModes = $book->transactions()->whereNotNull('mode')->where('mode', '!=', '')->latest('id')->limit(200)->pluck('mode')->map(fn($m) => ucfirst(strtolower($m)))->unique()->values()->toArray();
         $modes = array_values(array_unique(array_merge(['Cash', 'Bank', 'Online'], $dbModes)));
-        $contacts = $book->transactions()->whereNotNull('contact_name')->where('contact_name', '!=', '')->distinct()->pluck('contact_name')->values();
+        $contacts = $book->transactions()->whereNotNull('contact_name')->where('contact_name', '!=', '')->latest('id')->limit(200)->pluck('contact_name')->unique()->values();
 
         return view('books.show', compact('book','transactions','initialCardData','categories','bookRole','modes','contacts'));
     }
