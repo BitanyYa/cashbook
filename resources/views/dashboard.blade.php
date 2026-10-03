@@ -130,7 +130,7 @@
 </div>
 
 {{-- ── 3. Two-column body: Quick Actions + Charts ── --}}
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
+<div class="dashboard-grid-2col">
 
     {{-- Quick Actions card --}}
     <div class="card">
