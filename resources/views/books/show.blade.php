@@ -424,63 +424,87 @@
     @endif
 </div>
 
-{{-- ══ FILTER PILLS & SEARCH (Hidden for Employees) ══ --}}
+{{-- ══ FILTER TOOLBAR & SEARCH (Hidden for Employees) ══ --}}
 @if($bookRole !== 'employee')
-<div class="filter-pills-row">
-    <span class="fpill" style="position:relative;">
-        <select id="filter-duration" onchange="handleDurationChange(this.value)">
-            <option value="">Duration: All Time</option>
-            <option value="today">Today</option>
-            <option value="yesterday">Yesterday</option>
-            <option value="this_week">This Week</option>
-            <option value="last_week">Last Week</option>
-            <option value="this_month">This Month</option>
-            <option value="last_month">Last Month</option>
-            <option value="this_year">This Year</option>
-            <option value="single_date" id="single-date-opt">Single Date</option>
-            <option value="custom_range" id="custom-range-opt">Custom Range (Start &amp; End)</option>
-        </select>
-        <input type="date" id="filter-date" onchange="handleSingleDateSelected(this.value)" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;left:0;bottom:0;" />
-        <input type="hidden" id="filter-start-date" value="" />
-        <input type="hidden" id="filter-end-date" value="" />
-    </span>
-    <span class="fpill"><select id="filter-type" onchange="reloadTable()">
-        <option value="">Types: All</option>
-        <option value="income">Cash In</option>
-        <option value="expense">Cash Out</option>
-    </select></span>
-    <span class="fpill"><select id="filter-contact" onchange="reloadTable()">
-        <option value="">Contacts: All</option>
-        @foreach($contacts as $c)
-            <option value="{{ $c }}">{{ $c }}</option>
-        @endforeach
-    </select></span>
-    <span class="fpill"><select id="filter-member" onchange="reloadTable()">
-        <option value="">Members: All</option>
-        @foreach($book->business->users as $u)
-            <option value="{{ $u->id }}">{{ $u->name }}</option>
-        @endforeach
-    </select></span>
-    <span class="fpill"><select id="filter-mode" onchange="reloadTable()">
-        <option value="">Payment Modes: All</option>
-        <option value="Cash">Cash</option>
-        <option value="Bank">Bank</option>
-        <option value="Online">Online</option>
-        @foreach($modes as $mode)
-            @if(!in_array(strtolower($mode), ['cash', 'bank', 'online']))
-                <option value="{{ $mode }}">{{ ucfirst($mode) }}</option>
-            @endif
-        @endforeach
-    </select></span>
-</div>
-<div class="filter-pills-row">
-    <span class="fpill"><select id="filter-category" onchange="reloadTable()">
-        <option value="">Categories: All</option>
-        @foreach($categories as $cat)
-            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-        @endforeach
-    </select></span>
-    <button type="button" class="fpill-clear" onclick="clearAllFilters()">Clear Filters</button>
+<div class="filter-toolbar-wrap">
+    <div class="filter-toolbar-header">
+        <div class="filter-toolbar-label">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+            </svg>
+            <span>Filters</span>
+        </div>
+    </div>
+    <div class="filter-chips-grid">
+        <span class="fpill" id="fpill-duration" style="position:relative;">
+            <select id="filter-duration" onchange="handleDurationChange(this.value); updateActiveFilterStyles();">
+                <option value="">Duration: All Time</option>
+                <option value="today">Today</option>
+                <option value="yesterday">Yesterday</option>
+                <option value="this_week">This Week</option>
+                <option value="last_week">Last Week</option>
+                <option value="this_month">This Month</option>
+                <option value="last_month">Last Month</option>
+                <option value="this_year">This Year</option>
+                <option value="single_date" id="single-date-opt">Single Date</option>
+                <option value="custom_range" id="custom-range-opt">Custom Range (Start &amp; End)</option>
+            </select>
+            <input type="date" id="filter-date" onchange="handleSingleDateSelected(this.value); updateActiveFilterStyles();" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;left:0;bottom:0;" />
+            <input type="hidden" id="filter-start-date" value="" />
+            <input type="hidden" id="filter-end-date" value="" />
+        </span>
+        
+        <span class="fpill" id="fpill-type">
+            <select id="filter-type" onchange="reloadTable(); updateActiveFilterStyles();">
+                <option value="">Types: All</option>
+                <option value="income">Cash In</option>
+                <option value="expense">Cash Out</option>
+            </select>
+        </span>
+        
+        <span class="fpill" id="fpill-contact">
+            <select id="filter-contact" onchange="reloadTable(); updateActiveFilterStyles();">
+                <option value="">Contacts: All</option>
+                @foreach($contacts as $c)
+                    <option value="{{ $c }}">{{ $c }}</option>
+                @endforeach
+            </select>
+        </span>
+        
+        <span class="fpill" id="fpill-member">
+            <select id="filter-member" onchange="reloadTable(); updateActiveFilterStyles();">
+                <option value="">Members: All</option>
+                @foreach($book->business->users as $u)
+                    <option value="{{ $u->id }}">{{ $u->name }}</option>
+                @endforeach
+            </select>
+        </span>
+        
+        <span class="fpill" id="fpill-mode">
+            <select id="filter-mode" onchange="reloadTable(); updateActiveFilterStyles();">
+                <option value="">Payment Modes: All</option>
+                <option value="Cash">Cash</option>
+                <option value="Bank">Bank</option>
+                <option value="Online">Online</option>
+                @foreach($modes as $mode)
+                    @if(!in_array(strtolower($mode), ['cash', 'bank', 'online']))
+                        <option value="{{ $mode }}">{{ ucfirst($mode) }}</option>
+                    @endif
+                @endforeach
+            </select>
+        </span>
+        
+        <span class="fpill" id="fpill-category">
+            <select id="filter-category" onchange="reloadTable(); updateActiveFilterStyles();">
+                <option value="">Categories: All</option>
+                @foreach($categories as $cat)
+                    <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                @endforeach
+            </select>
+        </span>
+        
+        <button type="button" id="clear-filters-btn" class="fpill-clear" onclick="clearAllFilters()">Clear Filters</button>
+    </div>
 </div>
 
 {{-- ══ SEARCH + CASH IN / CASH OUT ══ --}}
@@ -492,13 +516,13 @@
         <input id="filter-search" type="text" placeholder="Search by remark or amount..." oninput="debounceSearch()">
         <span class="slash-hint">/</span>
     </div>
-    <button id="cash-in-btn" class="btn-cash-in">
+    <button id="cash-in-btn" class="btn-cash-in" onclick="openCashInModal()">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
         </svg>
         Cash In
     </button>
-    <button id="cash-out-btn" class="btn-cash-out">
+    <button id="cash-out-btn" class="btn-cash-out" onclick="openCashOutModal()">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4"/>
         </svg>
@@ -1142,6 +1166,40 @@
             reloadTable();
         }
 
+        function updateActiveFilterStyles() {
+            const filters = [
+                { id: 'filter-duration', parentId: 'fpill-duration' },
+                { id: 'filter-type', parentId: 'fpill-type' },
+                { id: 'filter-contact', parentId: 'fpill-contact' },
+                { id: 'filter-member', parentId: 'fpill-member' },
+                { id: 'filter-mode', parentId: 'fpill-mode' },
+                { id: 'filter-category', parentId: 'fpill-category' }
+            ];
+
+            let anyActive = false;
+            filters.forEach(item => {
+                const select = document.getElementById(item.id);
+                const parent = document.getElementById(item.parentId);
+                if (select && parent) {
+                    if (select.value && select.value !== '') {
+                        parent.classList.add('active');
+                        anyActive = true;
+                    } else {
+                        parent.classList.remove('active');
+                    }
+                }
+            });
+
+            const clearBtn = document.getElementById('clear-filters-btn');
+            if (clearBtn) {
+                if (anyActive) {
+                    clearBtn.classList.add('active-highlight');
+                } else {
+                    clearBtn.classList.remove('active-highlight');
+                }
+            }
+        }
+
         function clearAllFilters() {
             ['filter-date', 'filter-start-date', 'filter-end-date', 'filter-start-date-input', 'filter-end-date-input', 'filter-duration', 'filter-type', 'filter-contact', 'filter-member', 'filter-mode', 'filter-category', 'filter-search'].forEach(function(id) {
                 const el = document.getElementById(id);
@@ -1151,6 +1209,7 @@
             if (singleOpt) singleOpt.textContent = 'Single Date';
             const rangeOpt = document.getElementById('custom-range-opt');
             if (rangeOpt) rangeOpt.textContent = 'Custom Range (Start & End)';
+            updateActiveFilterStyles();
             reloadTable(true);
         }
 

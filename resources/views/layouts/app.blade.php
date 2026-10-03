@@ -36,6 +36,18 @@
         <script defer src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
         <script defer src="https://cdn.datatables.net/fixedheader/3.4.0/js/dataTables.fixedHeader.min.js"></script>
 
+        <!-- Zero-flicker Sidebar Collapsed Restore -->
+        <script>
+            (function() {
+                try {
+                    const collapsed = localStorage.getItem('cb_sidebar_collapsed') === 'true';
+                    if (collapsed && window.innerWidth >= 768) {
+                        document.documentElement.classList.add('cb-sidebar-collapsed');
+                    }
+                } catch(e) {}
+            })();
+        </script>
+
         <style>
             html, body {
                 height: 100%;
@@ -62,7 +74,7 @@
                 height: 100%;
                 overflow-y: auto;
                 overflow-x: hidden;
-                padding: 2rem;
+                padding: 1.75rem 2rem;
                 background: var(--gray-50);
                 display: flex;
                 flex-direction: column;
@@ -70,10 +82,6 @@
 
             /* ── Mobile layout ─────────────────────────── */
             @media (max-width: 767px) {
-                /* hide sidebar completely on mobile */
-                .app-sidebar { display: none !important; }
-
-                /* content fills full width with bottom safe area clearance */
                 .app-content {
                     padding: 0.75rem 0.75rem calc(5rem + env(safe-area-inset-bottom, 0px)) 0.75rem !important;
                     overflow-y: auto !important;
@@ -81,14 +89,9 @@
                     -webkit-overflow-scrolling: touch;
                 }
 
-                /* shrink topbar on mobile */
                 .app-header { padding: 0 0.75rem; }
                 .header-content { gap: 0.5rem; }
 
-                /* hide logo text, keep icon */
-                .app-logo-text { display: none; }
-
-                /* truncate business name in selector */
                 .header-content .btn span {
                     max-width: 120px;
                     overflow: hidden;
@@ -98,7 +101,6 @@
                     vertical-align: middle;
                 }
 
-                /* safe area bottom padding for fixed bars */
                 .mobile-bottom-bar {
                     padding-bottom: calc(0.875rem + env(safe-area-inset-bottom, 0px));
                 }
@@ -117,15 +119,36 @@
 
         @livewireStyles
     </head>
-    <body class="app-layout" x-data="{ sidebarOpen: false }">
+    <body class="app-layout" x-data="{
+        sidebarCollapsed: localStorage.getItem('cb_sidebar_collapsed') === 'true',
+        mobileDrawerOpen: false,
+        toggleSidebar() {
+            if (window.innerWidth < 768) {
+                this.mobileDrawerOpen = !this.mobileDrawerOpen;
+            } else {
+                this.sidebarCollapsed = !this.sidebarCollapsed;
+                localStorage.setItem('cb_sidebar_collapsed', this.sidebarCollapsed);
+                if (this.sidebarCollapsed) {
+                    document.documentElement.classList.add('cb-sidebar-collapsed');
+                } else {
+                    document.documentElement.classList.remove('cb-sidebar-collapsed');
+                }
+            }
+        }
+    }">
         <!-- Top Navigation -->
         <header class="app-header">
             <div class="header-content">
-                <!-- Left: Logo -->
-                <div class="flex items-center">
+                <!-- Left: Sidebar Toggle + Logo -->
+                <div class="flex items-center" style="gap: 10px;">
+                    <button type="button" @click="toggleSidebar()" class="sidebar-toggle-btn" title="Toggle Navigation Sidebar" aria-label="Toggle Sidebar" style="background: none; border: none; padding: 6px; cursor: pointer; color: var(--gray-600); border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s;">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
+                        </svg>
+                    </button>
                     <a href="{{ route('books.index') }}" class="app-logo-link" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
-                        <div style="background: #3b82f6; border-radius: 6px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: 1.125rem; font-family: sans-serif;">C</div>
-                        <span style="font-weight: 800; font-size: 1.125rem; color: #1e3a8a; letter-spacing: 0.05em; font-family: sans-serif;">CASHBOOK</span>
+                        <div style="background: #2563eb; border-radius: 6px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: 1.125rem; font-family: sans-serif; flex-shrink: 0;">C</div>
+                        <span class="app-logo-text" style="font-weight: 800; font-size: 1.125rem; color: #1e3a8a; letter-spacing: 0.05em; font-family: sans-serif;">CASHBOOK</span>
                     </a>
                 </div>
 
@@ -223,6 +246,9 @@
 
         <!-- Main Content -->
         <div class="app-main">
+            <!-- Mobile Sidebar Backdrop Overlay -->
+            <div x-show="mobileDrawerOpen" x-cloak @click="mobileDrawerOpen = false" class="mobile-sidebar-backdrop"></div>
+
             <!-- Sidebar -->
             @if($activeBusiness ?? null)
             @php
@@ -232,8 +258,7 @@
             @endphp
             <aside
                 class="app-sidebar"
-                :class="{ 'open': sidebarOpen }"
-                @click.away="sidebarOpen = false">
+                :class="{ 'collapsed': sidebarCollapsed, 'mobile-open': mobileDrawerOpen }">
 
                 {{-- ══════════════════════════════════
                      SECTION 1 — Book Keeping
@@ -247,7 +272,7 @@
                     </div>
 
                     {{-- Cashbooks top-level link --}}
-                    <a href="{{ route('books.index') }}"
+                    <a href="{{ route('books.index') }}" title="Cashbooks"
                        class="cb-nav-link {{ request()->routeIs('books.*') || request()->routeIs('transactions.*') || request()->routeIs('reports.*') ? 'active' : '' }}">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -274,7 +299,7 @@
                     </div>
 
                     {{-- Team → TeamController@index (settings.index) --}}
-                    <a href="{{ route('settings.index', $activeBusiness) }}"
+                    <a href="{{ route('settings.index', $activeBusiness) }}" title="Team"
                        class="cb-nav-link {{ request()->routeIs('settings.*') ? 'active' : '' }}">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -287,7 +312,7 @@
                     </a>
 
                     {{-- Admin Users Search & Cashbook Management --}}
-                    <a href="{{ route('admin.users.index') }}"
+                    <a href="{{ route('admin.users.index') }}" title="Users"
                        class="cb-nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -297,7 +322,7 @@
                     </a>
 
                     {{-- Business → BusinessController@index (businesses.index) --}}
-                    <a href="{{ route('businesses.index') }}"
+                    <a href="{{ route('businesses.index') }}" title="Business Settings"
                        class="cb-nav-link {{ request()->routeIs('businesses.*') ? 'active' : '' }}">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
                             <rect x="2" y="7" width="20" height="14" rx="2" ry="2"
@@ -309,7 +334,7 @@
                     </a>
 
                     {{-- Subscription → dummy link --}}
-                    <a href="#" class="cb-nav-link">
+                    <a href="#" title="Subscription" class="cb-nav-link">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -331,7 +356,7 @@
                     </div>
 
                     {{-- What's New --}}
-                    <a href="#" class="cb-nav-link" style="display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+                    <a href="#" title="What's New" class="cb-nav-link" style="display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
                         <span style="display: flex; align-items: center; gap: 0.625rem;">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -339,11 +364,11 @@
                             </svg>
                             <span>What's New</span>
                         </span>
-                        <span style="background: #10b981; color: white; font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 4px;">New</span>
+                        <span class="cb-nav-badge" style="background: #10b981; color: white; font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 4px;">New</span>
                     </a>
 
                     {{-- Help Docs --}}
-                    <a href="#" class="cb-nav-link">
+                    <a href="#" title="Help Docs" class="cb-nav-link">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -352,7 +377,7 @@
                     </a>
 
                     {{-- Contact Us --}}
-                    <a href="#" class="cb-nav-link">
+                    <a href="#" title="Contact Us" class="cb-nav-link">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
