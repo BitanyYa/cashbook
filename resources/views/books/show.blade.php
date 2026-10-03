@@ -374,37 +374,44 @@
         <div style="min-width:0;flex:1;">
             <h1 class="book-page-title">{{ $book->name }}</h1>
             @php
+                $roleLabel = match($bookRole) {
+                    'primary_admin' => 'Primary Admin',
+                    'admin' => 'Admin',
+                    default => 'Employee'
+                };
                 $memberNames = $book->users->pluck('name')->filter()->values();
                 $memberSub = $memberNames->take(3)->join(', ');
                 if ($memberNames->count() > 3) {
                     $memberSub .= ', ...';
                 }
             @endphp
-            @if(!empty($memberSub))
-                <div style="font-size:.72rem;color:var(--gray-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;">{{ $memberSub }}</div>
-            @endif
+            <div style="font-size:.78rem;color:var(--gray-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">
+                <span style="font-weight:600;color:var(--primary-dark);">{{ $roleLabel }}</span>
+                @if(!empty($memberSub)) &middot; {{ $memberSub }} @endif
+            </div>
         </div>
+    </div>
+    <div class="book-page-header-right">
         @if(in_array($userRole, ['primary_admin', 'admin']))
-        <a href="{{ route('books.edit', $book) }}" class="book-icon-btn" title="Book Settings">
-            <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <a href="{{ route('books.edit', $book) }}" class="btn btn-secondary btn-sm" title="Book Settings">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3" stroke-width="2"/>
             </svg>
+            Settings
         </a>
-        <button @click="$dispatch('open-modal', 'manage-users')" class="book-icon-btn" title="Manage Members">
-            <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <button type="button" @click="$dispatch('open-modal', 'manage-users')" class="btn btn-secondary btn-sm" title="Manage Members">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
             </svg>
+            Members
         </button>
-        @endif
-    </div>
-    @if($bookRole !== 'employee')
-    <div class="book-page-header-right">
         <a href="{{ route('transactions.import.create', $book) }}" class="btn btn-secondary btn-sm">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
             </svg>
             Add Bulk Entries
         </a>
+        @endif
         <a href="{{ route('reports.index', $book) }}" class="btn btn-secondary btn-sm">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -412,16 +419,6 @@
             Reports
         </a>
     </div>
-    @else
-    <div class="book-page-header-right">
-        <a href="{{ route('reports.index', $book) }}" class="btn btn-secondary btn-sm">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-            </svg>
-            Reports
-        </a>
-    </div>
-    @endif
 </div>
 
 {{-- ══ FILTER TOOLBAR & SEARCH (Hidden for Employees) ══ --}}
@@ -494,14 +491,69 @@
             </select>
         </span>
         
-        <span class="fpill" id="fpill-category">
-            <select id="filter-category" onchange="reloadTable(); updateActiveFilterStyles();">
+        {{-- Custom Searchable Alpine Category Dropdown --}}
+        <div x-data="cbCategoryDropdown()" x-on:click.outside="open = false" class="custom-fpill-wrap" id="fpill-category">
+            <button type="button" 
+                    x-on:click="toggle()" 
+                    class="custom-fpill-btn" 
+                    :class="{ 'active': selectedValue !== '' }">
+                <span class="truncate" x-text="selectedLabel">Categories: All</span>
+                <svg class="fpill-arrow" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
+
+            {{-- Hidden native select element for 100% DataTables & test compatibility --}}
+            <select id="filter-category" class="sr-only" x-model="selectedValue" onchange="reloadTable(); updateActiveFilterStyles();">
                 <option value="">Categories: All</option>
                 @foreach($categories as $cat)
                     <option value="{{ $cat->id }}">{{ $cat->name }}</option>
                 @endforeach
             </select>
-        </span>
+
+            <div x-show="open" 
+                 x-transition:enter="transition ease-out duration-100"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-75"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95"
+                 class="custom-dropdown-panel"
+                 style="display: none;">
+                
+                <div class="dropdown-search-header">
+                    <div class="dropdown-search-input-wrap">
+                        <svg class="w-3.5 h-3.5 search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
+                        </svg>
+                        <input type="text" 
+                               x-ref="searchInput"
+                               x-model="searchQuery" 
+                               placeholder="Search categories..." 
+                               class="dropdown-search-input"
+                               x-on:keydown.escape="open = false" />
+                    </div>
+                </div>
+
+                <div class="dropdown-options-list">
+                    <template x-for="item in filteredItems" :key="item.id">
+                        <div x-on:click="selectItem(item)"
+                             class="dropdown-option-item"
+                             :class="selectedValue == item.id ? 'selected' : ''">
+                            <span x-text="item.name" class="truncate"></span>
+                            <template x-if="selectedValue == item.id">
+                                <svg class="w-3.5 h-3.5 check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                            </template>
+                        </div>
+                    </template>
+                    <div x-show="filteredItems.length === 0" class="dropdown-no-results">
+                        No categories found
+                    </div>
+                </div>
+            </div>
+        </div>
         
         <button type="button" id="clear-filters-btn" class="fpill-clear" onclick="clearAllFilters()">Clear Filters</button>
     </div>
@@ -1205,12 +1257,68 @@
                 const el = document.getElementById(id);
                 if (el) el.value = '';
             });
+            window.dispatchEvent(new CustomEvent('clear-filters-reset'));
             const singleOpt = document.getElementById('single-date-opt');
             if (singleOpt) singleOpt.textContent = 'Single Date';
             const rangeOpt = document.getElementById('custom-range-opt');
             if (rangeOpt) rangeOpt.textContent = 'Custom Range (Start & End)';
             updateActiveFilterStyles();
             reloadTable(true);
+        }
+
+        function cbCategoryDropdown() {
+            const rawCategories = @js($categories->map(fn($c) => ['id' => (string)$c->id, 'name' => $c->name]));
+            return {
+                open: false,
+                searchQuery: '',
+                selectedValue: '',
+                selectedLabel: 'Categories: All',
+                items: rawCategories,
+                init() {
+                    const el = document.getElementById('filter-category');
+                    if (el && el.value) {
+                        this.selectedValue = el.value;
+                        const match = this.items.find(i => i.id == this.selectedValue);
+                        if (match) this.selectedLabel = match.name;
+                    }
+                    window.addEventListener('clear-filters-reset', () => {
+                        this.selectedValue = '';
+                        this.selectedLabel = 'Categories: All';
+                        this.searchQuery = '';
+                    });
+                },
+                toggle() {
+                    this.open = !this.open;
+                    if (this.open) {
+                        this.searchQuery = '';
+                        this.$nextTick(() => {
+                            if (this.$refs.searchInput) this.$refs.searchInput.focus();
+                        });
+                    }
+                },
+                get filteredItems() {
+                    const defaultItem = { id: '', name: 'Categories: All' };
+                    if (!this.searchQuery.trim()) {
+                        return [defaultItem, ...this.items];
+                    }
+                    const q = this.searchQuery.toLowerCase();
+                    const filtered = this.items.filter(i => i.name.toLowerCase().includes(q));
+                    return [defaultItem, ...filtered];
+                },
+                selectItem(item) {
+                    this.selectedValue = item.id;
+                    this.selectedLabel = item.id === '' ? 'Categories: All' : item.name;
+                    this.open = false;
+                    
+                    const selectEl = document.getElementById('filter-category');
+                    if (selectEl) {
+                        selectEl.value = item.id;
+                        selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                    if (typeof updateActiveFilterStyles === 'function') updateActiveFilterStyles();
+                    if (typeof reloadTable === 'function') reloadTable();
+                }
+            };
         }
 
         // ── CashBook App Card Renderer (Employees & Mobile) ──────────
