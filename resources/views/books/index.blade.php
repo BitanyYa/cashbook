@@ -178,7 +178,13 @@
     font-variant-numeric: tabular-nums;
 }
 
-/* Mobile FAB: Add New Book */
+.book-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Mobile Floating Action Button */
 .fab-add {
     position: fixed;
     bottom: calc(1.5rem + env(safe-area-inset-bottom));
@@ -195,6 +201,158 @@
 }
 .fab-add:hover { transform: scale(1.05); }
 @media (min-width: 640px) { .fab-add { display: none; } }
+
+/* ── Mobile-Specific Responsive Card Layout (< 640px) ── */
+@media (max-width: 639px) {
+    .books-page {
+        padding: 0.875rem 0.875rem 3rem;
+    }
+
+    .role-banner {
+        padding: 0.625rem 0.875rem;
+        font-size: 0.78rem;
+        margin-bottom: 0.875rem;
+    }
+
+    .bh {
+        margin-bottom: 0.875rem;
+    }
+
+    .bh-title {
+        font-size: 1.25rem;
+    }
+
+    .books-toolbar-wrap {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.625rem;
+        padding: 0.75rem;
+        margin-bottom: 0.875rem;
+    }
+
+    .books-search-wrap {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    .books-search {
+        height: 40px;
+    }
+
+    .books-sort-select {
+        width: 100%;
+        height: 40px;
+    }
+
+    .books-card-grid {
+        gap: 0.875rem;
+    }
+
+    .book-card-item {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 1rem;
+        gap: 0.75rem;
+        border-radius: 12px;
+        min-height: auto;
+    }
+
+    .book-card-main {
+        width: 100%;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .book-icon-badge {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        margin-top: 2px;
+    }
+
+    .book-card-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        line-height: 1.35;
+        color: #0f172a;
+        word-break: break-word;
+        white-space: normal;
+        margin-bottom: 4px;
+    }
+
+    .book-card-meta {
+        font-size: 0.78rem;
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.35rem 0.5rem;
+    }
+
+    .book-card-meta span {
+        white-space: nowrap;
+    }
+
+    .book-card-right {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px dashed #e2e8f0;
+    }
+
+    .book-balance-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #f8fafc;
+        padding: 0.625rem 0.875rem;
+        border-radius: 8px;
+        border: 1px solid #f1f5f9;
+        text-align: left;
+    }
+
+    .book-balance-label {
+        font-size: 0.725rem;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .book-balance-amount {
+        font-size: 1.1rem;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .book-card-actions {
+        width: 100%;
+        gap: 0.5rem;
+    }
+
+    .book-card-actions .btn-open-book {
+        flex: 1;
+        height: 40px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        justify-content: center;
+        display: flex;
+        align-items: center;
+    }
+
+    .book-card-actions .btn-secondary {
+        height: 40px;
+        width: 40px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+}
 </style>
 
 <div class="books-page">
@@ -242,7 +400,7 @@
                        oninput="debouncedSearch()"
                        class="books-search">
             </div>
-            <div style="display:flex;align-items:center;gap:.5rem;">
+            <div style="display:flex;align-items:center;gap:.5rem;" class="books-sort-wrap">
                 <select name="sort" id="bookSort" onchange="fetchBooks(1)" class="books-sort-select">
                     <option value="updated_at_desc" {{ (request('sort')=='updated_at_desc' || (!request('sort') && ($sort ?? '')=='updated_at_desc'))?'selected':'' }}>Last Updated</option>
                     <option value="name_asc"        {{ (request('sort')=='name_asc'        || (!request('sort') && ($sort ?? '')=='name_asc'))?'selected':'' }}>Name A–Z</option>
@@ -291,16 +449,18 @@
                             {{ $balance>=0?'':'-' }}{{ number_format(abs($balance)) }}
                         </div>
                     </div>
-                    @if(in_array($role,['primary_admin','admin']))
-                    <a href="{{ route('books.edit', $book) }}" class="btn btn-secondary btn-sm" style="padding:0.35rem 0.625rem;" onclick="event.stopPropagation()" title="Settings">
-                        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/>
-                        </svg>
-                    </a>
-                    @endif
-                    <a href="{{ route('books.show', $book) }}" class="btn btn-primary btn-sm" onclick="event.stopPropagation()">
-                        Open
-                    </a>
+                    <div class="book-card-actions">
+                        @if(in_array($role,['primary_admin','admin']))
+                        <a href="{{ route('books.edit', $book) }}" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()" title="Settings">
+                            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/>
+                            </svg>
+                        </a>
+                        @endif
+                        <a href="{{ route('books.show', $book) }}" class="btn btn-primary btn-sm btn-open-book" onclick="event.stopPropagation()">
+                            Open Book
+                        </a>
+                    </div>
                 </div>
             </div>
             @empty
@@ -415,12 +575,14 @@ function renderBooks(books) {
                         ${esc(b.balance_formatted)}
                     </div>
                 </div>
-                ${isAdmin?`<a href="${b.edit_url}" class="btn btn-secondary btn-sm" style="padding:0.35rem 0.625rem;" onclick="event.stopPropagation()" title="Settings">
-                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
-                </a>`:''}
-                <a href="${b.url}" class="btn btn-primary btn-sm" onclick="event.stopPropagation()">
-                    Open
-                </a>
+                <div class="book-card-actions">
+                    ${isAdmin?`<a href="${b.edit_url}" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()" title="Settings">
+                        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
+                    </a>`:''}
+                    <a href="${b.url}" class="btn btn-primary btn-sm btn-open-book" onclick="event.stopPropagation()">
+                        Open Book
+                    </a>
+                </div>
             </div>
         </div>`).join('');
 }
