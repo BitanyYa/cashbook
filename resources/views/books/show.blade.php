@@ -432,7 +432,7 @@
             <span>Filters</span>
         </div>
     </div>
-    <div class="filter-chips-grid">
+    <div class="filter-pills-row">
         <span class="fpill" id="fpill-duration" style="position:relative;">
             <select id="filter-duration" onchange="handleDurationChange(this.value); updateActiveFilterStyles();">
                 <option value="">Duration: All Time</option>
@@ -491,69 +491,14 @@
             </select>
         </span>
         
-        {{-- Custom Searchable Alpine Category Dropdown --}}
-        <div x-data="cbCategoryDropdown()" x-on:click.outside="open = false" class="custom-fpill-wrap" id="fpill-category">
-            <button type="button" 
-                    x-on:click="toggle()" 
-                    class="custom-fpill-btn" 
-                    :class="{ 'active': selectedValue !== '' }">
-                <span class="truncate" x-text="selectedLabel">Categories: All</span>
-                <svg class="fpill-arrow" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                </svg>
-            </button>
-
-            {{-- Hidden native select element for 100% DataTables & test compatibility --}}
-            <select id="filter-category" class="sr-only" x-model="selectedValue" onchange="reloadTable(); updateActiveFilterStyles();">
+        <span class="fpill" id="fpill-category">
+            <select id="filter-category" onchange="reloadTable(); updateActiveFilterStyles();">
                 <option value="">Categories: All</option>
                 @foreach($categories as $cat)
                     <option value="{{ $cat->id }}">{{ $cat->name }}</option>
                 @endforeach
             </select>
-
-            <div x-show="open" 
-                 x-transition:enter="transition ease-out duration-100"
-                 x-transition:enter-start="opacity-0 scale-95"
-                 x-transition:enter-end="opacity-100 scale-100"
-                 x-transition:leave="transition ease-in duration-75"
-                 x-transition:leave-start="opacity-100 scale-100"
-                 x-transition:leave-end="opacity-0 scale-95"
-                 class="custom-dropdown-panel"
-                 style="display: none;">
-                
-                <div class="dropdown-search-header">
-                    <div class="dropdown-search-input-wrap">
-                        <svg class="w-3.5 h-3.5 search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
-                        </svg>
-                        <input type="text" 
-                               x-ref="searchInput"
-                               x-model="searchQuery" 
-                               placeholder="Search categories..." 
-                               class="dropdown-search-input"
-                               x-on:keydown.escape="open = false" />
-                    </div>
-                </div>
-
-                <div class="dropdown-options-list">
-                    <template x-for="item in filteredItems" :key="item.id">
-                        <div x-on:click="selectItem(item)"
-                             class="dropdown-option-item"
-                             :class="selectedValue == item.id ? 'selected' : ''">
-                            <span x-text="item.name" class="truncate"></span>
-                            <template x-if="selectedValue == item.id">
-                                <svg class="w-3.5 h-3.5 check-icon" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                </svg>
-                            </template>
-                        </div>
-                    </template>
-                    <div x-show="filteredItems.length === 0" class="dropdown-no-results">
-                        No categories found
-                    </div>
-                </div>
-            </div>
-        </div>
+        </span>
         
         <button type="button" id="clear-filters-btn" class="fpill-clear" onclick="clearAllFilters()">Clear Filters</button>
     </div>
@@ -1257,68 +1202,12 @@
                 const el = document.getElementById(id);
                 if (el) el.value = '';
             });
-            window.dispatchEvent(new CustomEvent('clear-filters-reset'));
             const singleOpt = document.getElementById('single-date-opt');
             if (singleOpt) singleOpt.textContent = 'Single Date';
             const rangeOpt = document.getElementById('custom-range-opt');
             if (rangeOpt) rangeOpt.textContent = 'Custom Range (Start & End)';
             updateActiveFilterStyles();
             reloadTable(true);
-        }
-
-        function cbCategoryDropdown() {
-            const rawCategories = @js($categories->map(fn($c) => ['id' => (string)$c->id, 'name' => $c->name]));
-            return {
-                open: false,
-                searchQuery: '',
-                selectedValue: '',
-                selectedLabel: 'Categories: All',
-                items: rawCategories,
-                init() {
-                    const el = document.getElementById('filter-category');
-                    if (el && el.value) {
-                        this.selectedValue = el.value;
-                        const match = this.items.find(i => i.id == this.selectedValue);
-                        if (match) this.selectedLabel = match.name;
-                    }
-                    window.addEventListener('clear-filters-reset', () => {
-                        this.selectedValue = '';
-                        this.selectedLabel = 'Categories: All';
-                        this.searchQuery = '';
-                    });
-                },
-                toggle() {
-                    this.open = !this.open;
-                    if (this.open) {
-                        this.searchQuery = '';
-                        this.$nextTick(() => {
-                            if (this.$refs.searchInput) this.$refs.searchInput.focus();
-                        });
-                    }
-                },
-                get filteredItems() {
-                    const defaultItem = { id: '', name: 'Categories: All' };
-                    if (!this.searchQuery.trim()) {
-                        return [defaultItem, ...this.items];
-                    }
-                    const q = this.searchQuery.toLowerCase();
-                    const filtered = this.items.filter(i => i.name.toLowerCase().includes(q));
-                    return [defaultItem, ...filtered];
-                },
-                selectItem(item) {
-                    this.selectedValue = item.id;
-                    this.selectedLabel = item.id === '' ? 'Categories: All' : item.name;
-                    this.open = false;
-                    
-                    const selectEl = document.getElementById('filter-category');
-                    if (selectEl) {
-                        selectEl.value = item.id;
-                        selectEl.dispatchEvent(new Event('change', { bubbles: true }));
-                    }
-                    if (typeof updateActiveFilterStyles === 'function') updateActiveFilterStyles();
-                    if (typeof reloadTable === 'function') reloadTable();
-                }
-            };
         }
 
         // ── CashBook App Card Renderer (Employees & Mobile) ──────────

@@ -194,7 +194,10 @@
     transition: transform 0.15s ease;
 }
 .fab-add:hover { transform: scale(1.05); }
-@media (min-width: 640px) { .fab-a<div class="books-page">
+@media (min-width: 640px) { .fab-add { display: none; } }
+</style>
+
+<div class="books-page">
 
     {{-- ── Role banner ── --}}
     @if(isset($role))
