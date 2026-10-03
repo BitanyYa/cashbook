@@ -457,8 +457,8 @@
         <span class="fpill" id="fpill-type">
             <select id="filter-type" onchange="reloadTable(); updateActiveFilterStyles();">
                 <option value="">Types: All</option>
-                <option value="income">Cash In</option>
-                <option value="expense">Cash Out</option>
+                <option value="income">Income</option>
+                <option value="expense">Expense</option>
             </select>
         </span>
         
